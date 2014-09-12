@@ -1,0 +1,11 @@
+build/
+packages/
+pubspec.lock  // Except for application packages
+.buildlog
+.project
+.pub/
+.DS_Store
+*.dart.js
+*.js_
+*.js.deps
+*.js.map
