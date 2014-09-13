@@ -1,4 +1,4 @@
 name: shapeshift
 description: A sample command-line application
-#dev_dependencies:
-#  unittest: any
+dev_dependencies:
+  unittest: '>=0.11.0'
