@@ -4,8 +4,15 @@ class JsonDiffer {
   Map<String,Object> leftJson, rightJson;
   
   JsonDiffer(leftString, rightString) {
-    leftJson = new JsonDecoder().convert(leftString);
-    rightJson = new JsonDecoder().convert(rightString);
+    Object _leftJson = new JsonDecoder().convert(leftString);
+    Object _rightJson = new JsonDecoder().convert(rightString);
+    
+    if (_leftJson is Map && _rightJson is Map) {
+      leftJson = _leftJson;
+      rightJson = _rightJson;
+    } else {
+      throw new FormatException("JSON must be a single object");
+    }
   }
   
   void ensureIdentical(List<String> topLevelFields) {
