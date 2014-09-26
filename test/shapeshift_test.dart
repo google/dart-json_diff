@@ -10,16 +10,16 @@ import 'package:unittest/unittest.dart';
 
 void main() {
   String necks2000, necks2010;
-  JsonDiffer necksDiffer;
-  
+  JsonDiffer differ, necksDiffer;
+
   setUp(() {
     necks2000 = jsonFrom(necks2000Map);
     necks2010 = jsonFrom(necks2010Map);
     necksDiffer = new JsonDiffer(necks2000, necks2010);
   });
-  
+
   test('JsonDiffer initializes OK', () {
-    JsonDiffer differ = new JsonDiffer(jsonFrom({'a': 1}), jsonFrom({'b': 1}));
+    differ = new JsonDiffer('{"a": 1}', '{"b": 1}');
     expect(differ.leftJson['a'], equals(1));
     
     expect(() => new JsonDiffer('{}', '{}'), returnsNormally);
@@ -27,37 +27,72 @@ void main() {
     expect(necksDiffer.leftJson['owner'], equals(necks2000Map['owner']));
     expect(necksDiffer.rightJson['owner'], equals(necks2010Map['owner']));
   });
-  
+
   test('JsonDiffer throws FormatException', () {
     expect(() => new JsonDiffer('{', '{}'), throwsFormatException);
     expect(() => new JsonDiffer('', ''), throwsFormatException);
     // TODO: support List root nodes
     expect(() => new JsonDiffer('[]', '[]'), throwsFormatException);
   });
-  
+
   test('JsonDiffer ensureIdentical returns OK', () {
     expect(() => necksDiffer.ensureIdentical(['name']), returnsNormally);
   });
-  
+
   test('JsonDiffer ensureIdentical raises', () {
     expect(() => necksDiffer.ensureIdentical(['owner']),
            throwsA(new isInstanceOf<UncomparableJsonException>()));
   });
-  
+
   test('JsonDiffer diff() identical objects', () {
-    JsonDiffer differ = new JsonDiffer(jsonFrom({'a': 1}), jsonFrom({'a': 1}));
-    DiffNode node = differ.diff();
-    expect(node.added.isEmpty, isTrue);
-    expect(node.removed.isEmpty, isTrue);
-    expect(node.changed.isEmpty, isTrue);
-  });
-  
-  test('JsonDiffer diff() with a changed value', () {
-    JsonDiffer differ = new JsonDiffer(jsonFrom({'a': 1}), jsonFrom({'a': 2}));
+    differ = new JsonDiffer('{"a": 1}', '{"a": 1}');
     DiffNode node = differ.diff();
     expect(node.added, isEmpty);
     expect(node.removed, isEmpty);
-    expect(node.changed.isNotEmpty, isTrue);
+    expect(node.changed, isEmpty);
+    expect(node.node, isEmpty);
+  });
+
+  test('JsonDiffer diff() with a new value', () {
+    differ = new JsonDiffer('{"a": 1}', '{"a": 1, "b": 2}');
+    DiffNode node = differ.diff();
+    expect(node.added, hasLength(1));
+    expect(node.added["b"], equals(2));
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, isEmpty);
+  });
+
+  test('JsonDiffer diff() with a removed value', () {
+    differ = new JsonDiffer('{"a": 1, "b": 2}', '{"a": 1}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, hasLength(1));
+    expect(node.removed["b"], equals(2));
+    expect(node.changed, isEmpty);
+    expect(node.node, isEmpty);
+  });
+
+  test('JsonDiffer diff() with a changed value', () {
+    differ = new JsonDiffer('{"a": 1}', '{"a": 2}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, hasLength(1));
+    expect(node.changed["a"], equals([1, 2]));
+    expect(node.node, isEmpty);
+  });
+
+  test('JsonDiffer diff() with a deeply changed value', () {
+    differ = new JsonDiffer('{"a": {"x": 1}}', '{"a": {"x": 2}}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, hasLength(1));
+    DiffNode innerNode = node.node["a"];
+    expect(innerNode.changed, hasLength(1));
+    expect(innerNode.changed["x"], equals([1,2]));
   });
 }
 
