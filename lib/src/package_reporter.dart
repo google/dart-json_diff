@@ -17,7 +17,29 @@ class PackageReporter {
         ..metadata['name'] = differ.leftJson['name']
         ..metadata['packageName'] = differ.leftJson['packageName'];
   }
-  
+
+  void calculateAllDiffs() {
+    List<FileSystemEntity> leftRawLs = new Directory(leftPath).listSync();
+    List<String> leftLs = leftRawLs
+        .where((FileSystemEntity f) => f is File)
+        .map((File f) => f.path)
+        .toList();
+    List<String> packageFiles = leftLs
+        .where((String f) => f.split('/').last.split('.').length == 2) // TODO: WTF
+        .toList();
+    if (packageFiles.length == 1) {
+      String packageFile = packageFiles[0];
+      leftLs.remove(packageFile);
+      String packageFileBaseName = packageFile.split('/').last;
+      calculateDiff(packageFileBaseName);
+    }
+
+    leftLs.forEach((String file) {
+      file = file.split('/').last;
+      calculateDiff(file);
+    });
+  }
+
   void report() {
     diff.forEach((k,v) => reportFile(k));
   }

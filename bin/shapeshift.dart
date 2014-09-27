@@ -1,18 +1,27 @@
-import 'dart:io';
 import 'package:shapeshift/shapeshift.dart';
+import 'package:args/args.dart';
 
-void main() {
-  const String dir = "/Users/srawlins/code/dartlang.org/api-docs";
-  const String leftApi = "api_docs-v1.5.8";
-  const String rightApi = "api_docs-v1.6.0";
-  File leftFile, rightFile;
+class Shapeshift {
+  ArgResults args;
   
-  PackageReporter packageReporter = new PackageReporter(
-      "$dir/$leftApi/docgen/args",
-      "$dir/$rightApi/docgen/args");
+  void go(List<String> arguments) {
+    parseArgs(arguments);
+    String left = "api_docs-v1.5.8"; //args.rest[0];
+    String right = "api_docs-v1.6.0"; //args.rest[1];
+
+    PackageReporter packageReporter = new PackageReporter(
+        "${args['base']}/$left/${args['subset']}",
+        "${args['base']}/$right/${args['subset']}");
+
+    packageReporter..calculateAllDiffs()..report();
+  }
   
-  packageReporter..calculateDiff("args.json")
-      ..calculateDiff("args.ArgParser.json")
-      ..calculateDiff("args.ArgResults.json")
-      ..calculateDiff("args.Option.json")..report();
+  void parseArgs(List<String> arguments) {
+    var parser = new ArgParser();
+    parser.addOption('base', defaultsTo: '/Users/srawlins/code/dartlang.org/api-docs');
+    parser.addOption('subset', defaultsTo: 'docgen/args');
+    args = parser.parse(arguments);
+  }
 }
+
+void main(List<String> arguments) => new Shapeshift().go(arguments);
