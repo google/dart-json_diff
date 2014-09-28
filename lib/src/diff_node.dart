@@ -25,6 +25,14 @@ class DiffNode {
     if (node != null) { node.forEach(ffn); }
   }
   
+  List<Object> map(void ffn(String s, DiffNode dn)) {
+    List result = new List();
+    if (node != null) {
+      forEach((s, dn) { result.add(ffn(s, dn)); });
+    }
+    return result;
+  }
+  
   void forEachOf(String key, void ffn(String s, DiffNode dn)) {
     if (node == null) { return; }
     if (node.containsKey(key)) {
@@ -69,7 +77,36 @@ class DiffNode {
   get hasRemoved => removed.isNotEmpty;
   get hasChanged => changed.isNotEmpty;
 
-  String toString() {
-    return "added: $added; removed: $removed; changed: $changed";
+  String toString([String gap=""]) {
+    Map<String,String> nodeToStrings = new Map();
+    if (node != null) {
+      node.forEach((String key, DiffNode d) { nodeToStrings[key] = d.toString(gap+"    "); });
+    }
+    if (metadata.isEmpty && added.isEmpty && removed.isEmpty && changed.isEmpty && nodeToStrings.values.join().isEmpty) {
+      return "";
+    }
+
+    String result = "{\n";
+    if (metadata.isNotEmpty) {
+      result += "$gap  metadata: $metadata,\n";
+    }
+    if (added.isNotEmpty) {
+      result += "$gap  added: $added,\n";
+    }
+    if (removed.isNotEmpty) {
+      result += "$gap  removed: $removed,\n";
+    }
+    if (changed.isNotEmpty) {
+      result += "$gap  changed: $changed,\n";
+    }
+    if (nodeToStrings.isNotEmpty) {
+      result += "$gap  node: {\n";
+      nodeToStrings.forEach((String key, String s) {
+        if (s.isNotEmpty) {
+          result += "$gap    $key: $s\n";
+        }
+      });
+    }
+    return result;
   }
 }

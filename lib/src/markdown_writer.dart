@@ -28,6 +28,10 @@ class MarkdownWriter {
 
     io.writeln(s);
   }
+  
+  void writeBlockquote(String s) {
+    io.writeln(s.split("\n").map((m) => "> $m\n").join());
+  }
 
   void writeCodeblockHr(String s) {
     io.writeln("```dart\n${s}\n```\n---");

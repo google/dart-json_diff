@@ -4,7 +4,6 @@ class PackageReporter {
   final Map<String,DiffNode> diff = new Map<String,DiffNode>();
   final String leftPath, rightPath, out;
   MarkdownWriter io;
-  String outFileName;
   
   PackageReporter(this.leftPath, this.rightPath, { this.out });
   
@@ -17,9 +16,6 @@ class PackageReporter {
         ..metadata['qualifiedName'] = differ.leftJson['qualifiedName']
         ..metadata['name'] = differ.leftJson['name']
         ..metadata['packageName'] = differ.leftJson['packageName'];
-    if (differ.leftJson['packageName'] != null) {
-      outFileName = differ.leftJson['packageName'];
-    }
   }
 
   void calculateAllDiffs() {
@@ -49,6 +45,7 @@ class PackageReporter {
         if (!diffsBySubpackage.containsKey(subpackage)) {
           diffsBySubpackage[subpackage] = new PackageSdk();
         } else {
+          print(node);
           diffsBySubpackage[subpackage].classes.add(node);
         }
       }
@@ -95,7 +92,7 @@ class FileReporter {
       io.bufferH1(diff.metadata['qualifiedName']);
       reportPackage();
     } else {
-      io.bufferH2(diff.metadata['name']);
+      io.bufferH2("class ${diff.metadata["name"]}");
       reportClass();
     }
   }
@@ -149,7 +146,7 @@ class FileReporter {
   void reportEachClassThing(String classCategory, DiffNode d) {
     d.forEachAdded((idx, klass) {
       io.writeln("New $classCategory [${klass['name']}](#)");
-      io.writeln("");
+      io.writeln("\n---\n");
     });
   }
   
@@ -187,10 +184,10 @@ class FileReporter {
     attributes.forEachChanged((k, v) {
       io.writeln("The [$method](#) ${singularize(methodCategory)}'s `${k}` changed:\n");
       if (k == "comment") {
-        String was = (v as List<String>)[0].split("\n").map((m) => "> $m").join("\n");
-        io.writeln("Was:\n\n$was\n");
-        String now = (v as List<String>)[1].split("\n").map((m) => "> $m").join("\n");
-        io.writeln("Now:\n\n$now\n");
+        io..writeln("Was:\n")
+            ..writeBlockquote((v as List<String>)[0])
+            ..writeln("Now:\n")
+            ..writeBlockquote((v as List<String>)[1]);
       } else {
         io.writeln("Was: `${(v as List)[0]}`\n");
         io.writeln("Now: `${(v as List)[1]}`");
