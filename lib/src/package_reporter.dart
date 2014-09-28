@@ -124,14 +124,12 @@ class FileReporter {
     DiffNode variables = diff["variables"];
     if (variables.hasAdded) {
       io.writeln("New variables:\n");
-      writeCodeblock(() => variables.added.values.map(variableSignature).join("\n"));
-      io.writeln("---\n");
+      writeCodeblockHr(variables.added.values.map(variableSignature).join("\n"));
     }
 
     if (variables.hasRemoved) {
       io.writeln("Removed variables:\n");
-      writeCodeblock(() => variables.removed.values.map(variableSignature).join("\n"));
-      io.writeln("---\n");
+      writeCodeblockHr(variables.removed.values.map(variableSignature).join("\n"));
     }
 
     if (variables.hasChanged) {
@@ -152,8 +150,8 @@ class FileReporter {
     });
   }
   
-  void writeCodeblock(String x()) {
-    io.write("```dart\n${x()}\n```\n\n");
+  void writeCodeblockHr(String s) {
+    io.write("```dart\n${s}\n```\n---\n");
   }
 
   String h1(String s) {
@@ -174,27 +172,15 @@ class FileReporter {
   void reportEachMethodThing(String methodCategory, DiffNode d) {
     d.forEachAdded((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
-      io.writeln(
-"""New ${singularize(methodCategory)} [$k](#):
-
-```dart
-${methodSignature(v as Map)}
-```
----
-""");
+      io.writeln("New ${singularize(methodCategory)} [$k](#):\n");
+      writeCodeblockHr(methodSignature(v as Map));
     });
     
     d.forEachRemoved((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
       if (k == '') { k = diff.metadata['name']; }
-      io.writeln(
-"""Removed ${singularize(methodCategory)} [$k](#):
-
-```dart
-${methodSignature(v as Map, includeComment: false)}
-```
----
-""");
+      io.writeln("Removed ${singularize(methodCategory)} [$k](#):\n");
+      writeCodeblockHr(methodSignature(v as Map, includeComment: false));
     });
           
     // iterate over the methods
