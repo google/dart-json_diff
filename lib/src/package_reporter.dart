@@ -28,15 +28,6 @@ class PackageReporter {
         .where((FileSystemEntity f) => f is File)
         .map((File f) => f.path)
         .toList();
-    List<String> packageFiles = leftLs
-        .where((String f) => f.split('/').last.split('.').length == 2) // TODO: WTF
-        .toList();
-    if (packageFiles.length == 1) {
-      String packageFile = packageFiles[0];
-      leftLs.remove(packageFile);
-      String packageFileBaseName = packageFile.split('/').last;
-      calculateDiff(packageFileBaseName);
-    }
 
     leftLs.forEach((String file) {
       file = file.split('/').last;
@@ -45,23 +36,56 @@ class PackageReporter {
   }
 
   void report() {
-    if (out != null) {
-      Directory dir = new Directory(out)..createSync();
-      io = (new File('$out/$outFileName.markdown')..createSync()).openWrite();
-      io.writeln("---");
-      io.writeln("layout: page");
-      io.writeln("title: $outFileName");
-      io.writeln("permalink: /$outFileName/");
-      io.writeln("---");
-    } else {
-      io = stdout;
-    }
+    Map<String,PackageSdk> diffsBySubpackage = new Map();
+    diff.forEach((String file, DiffNode node) {
+      if (node.metadata["packageName"] != null) {
+        String subpackage = node.metadata["qualifiedName"];
+        if (!diffsBySubpackage.containsKey(subpackage)) {
+          diffsBySubpackage[subpackage] = new PackageSdk();
+        }
+        diffsBySubpackage[subpackage].package = node;
+      } else {
+        String subpackage = getSubpackage(node);
+        if (!diffsBySubpackage.containsKey(subpackage)) {
+          diffsBySubpackage[subpackage] = new PackageSdk();
+        } else {
+          diffsBySubpackage[subpackage].classes.add(node);
+        }
+      }
+    });
 
-    diff.forEach(reportFile);
+    diffsBySubpackage.forEach((String name, PackageSdk p) {
+      setIo(name);
+      reportFile(p.package);
+      p.classes.forEach(reportFile);
+    });
   }
   
-  void reportFile(String fileName, DiffNode d) {
-    new FileReporter(fileName, d, io: io).report();
+  void setIo(String packageName) {
+    if (out == null) {
+      io = stdout;
+      return;
+    }
+
+    Directory dir = new Directory(out)..createSync(recursive: true);
+    io = (new File('$out/$packageName.markdown')..createSync(recursive: true)).openWrite();
+    writeMetadata(packageName);
+  }
+  
+  void writeMetadata(String packageName) {
+    io.writeln("""---
+layout: page
+title: $packageName
+permalink: /$packageName/
+---""");
+  }
+
+  void reportFile(DiffNode d) {
+    new FileReporter("xxx", d, io: io).report();
+  }
+  
+  String getSubpackage(DiffNode node) {
+    return (node.metadata["qualifiedName"]).split('.')[0];
   }
 }
 
@@ -80,7 +104,6 @@ class FileReporter {
       reportPackage();
     } else {
       io.writeln(h2(diff.metadata['name']));
-      print(diff.metadata['name']);
       reportClass();
     }
   }
@@ -102,15 +125,17 @@ class FileReporter {
     if (variables.hasAdded) {
       io.writeln("New variables:\n");
       writeCodeblock(() => variables.added.values.map(variableSignature).join("\n"));
+      io.writeln("---\n");
     }
 
     if (variables.hasRemoved) {
       io.writeln("Removed variables:\n");
       writeCodeblock(() => variables.removed.values.map(variableSignature).join("\n"));
+      io.writeln("---\n");
     }
 
-    if (variables.node.isNotEmpty) {
-      variables.node.forEach((k,v) {
+    if (variables.hasChanged) {
+      variables.forEachChanged((k,v) {
         print("CHANGED: $k, $v");
       });
     }
@@ -118,7 +143,10 @@ class FileReporter {
     variables.forEach((k, variable) {
       if (variable.hasChanged) {
         variable.forEachChanged((attribute, value) {
-          io.writeln("[$attribute](#) changed from `${value[0]}` to `${value[1]}`\n");
+          io.writeln("The [$attribute](#) variable changed:\n");
+          io.writeln("Was: `${value[0]}`\n");
+          io.writeln("Now: `${value[1]}`\n");
+          io.writeln("---\n");
         });
       }
     });
@@ -146,21 +174,27 @@ class FileReporter {
   void reportEachMethodThing(String methodCategory, DiffNode d) {
     d.forEachAdded((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
-      io.writeln("New ${singularize(methodCategory)} [$k](#):\n");
-      io.writeln("```dart");
-      io.writeln(methodSignature(v as Map));
-      io.writeln("```");
-      io.writeln("");
+      io.writeln(
+"""New ${singularize(methodCategory)} [$k](#):
+
+```dart
+${methodSignature(v as Map)}
+```
+---
+""");
     });
     
     d.forEachRemoved((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
       if (k == '') { k = diff.metadata['name']; }
-      io.writeln("Removed ${singularize(methodCategory)} [$k](#):\n");
-      io.writeln("```dart");
-      io.writeln(methodSignature(v as Map, includeComment: false));
-      io.writeln("```");
-      io.writeln("");
+      io.writeln(
+"""Removed ${singularize(methodCategory)} [$k](#):
+
+```dart
+${methodSignature(v as Map, includeComment: false)}
+```
+---
+""");
     });
           
     // iterate over the methods
@@ -176,7 +210,7 @@ class FileReporter {
         //print("The '$method' in '$methodCategory' has a new $name: '$k': ${pretty(v)}");
         String category = singularize(methodCategory);
         io.writeln("The [$method](#) ${category} has a new ${singularize(name)}: `${parameterSignature(v as Map)}`");
-        io.writeln("");
+        io.writeln("\n---\n");
       });
     });
     
@@ -191,7 +225,7 @@ class FileReporter {
         io.writeln("Was: `${(v as List)[0]}`\n");
         io.writeln("Now: `${(v as List)[1]}`");
       }
-      io.writeln("");
+      io.writeln("\n---\n");
     });
   }
   
@@ -240,4 +274,9 @@ class FileReporter {
 String singularize(String s) {
   // Remove trailing character. Presumably an 's'.
   return s.substring(0, s.length-1);
+}
+
+class PackageSdk {
+  final List<DiffNode> classes = new List();
+  DiffNode package;
 }
