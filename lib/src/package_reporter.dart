@@ -4,7 +4,7 @@ class PackageReporter {
   final Map<String,DiffNode> diff = new Map<String,DiffNode>();
   final String leftPath, rightPath, out;
   IOSink io;
-  String x;
+  String outFileName;
   
   PackageReporter(this.leftPath, this.rightPath, { this.out });
   
@@ -18,7 +18,7 @@ class PackageReporter {
         ..metadata['name'] = differ.leftJson['name']
         ..metadata['packageName'] = differ.leftJson['packageName'];
     if (differ.leftJson['packageName'] != null) {
-      x = differ.leftJson['packageName'];
+      outFileName = differ.leftJson['packageName'];
     }
   }
 
@@ -47,7 +47,12 @@ class PackageReporter {
   void report() {
     if (out != null) {
       Directory dir = new Directory(out)..createSync();
-      io = (new File('$out/$x.markdown')..createSync()).openWrite();
+      io = (new File('$out/$outFileName.markdown')..createSync()).openWrite();
+      io.writeln("---");
+      io.writeln("layout: page");
+      io.writeln("title: $outFileName");
+      io.writeln("permalink: /$outFileName/");
+      io.writeln("---");
     } else {
       io = stdout;
     }
@@ -71,12 +76,13 @@ class FileReporter {
   void report() {
 
     if (diff.metadata['packageName'] != null) {
-          io.writeln(h1(diff.metadata['qualifiedName']));
-          reportPackage();
-        } else {
-          io.writeln(h2(diff.metadata['name']));
-          reportClass();
-        }
+      io.writeln(h1(diff.metadata['qualifiedName']));
+      reportPackage();
+    } else {
+      io.writeln(h2(diff.metadata['name']));
+      print(diff.metadata['name']);
+      reportClass();
+    }
   }
 
   void reportPackage() {
@@ -92,28 +98,47 @@ class FileReporter {
       reportEachMethodThing(k, v);
     });
     
-    diff["variables"].forEachAdded((k,v) {
-      io.writeln("New variable: `${variableSignature(v as Map)}`");
-      io.writeln("");
-    });
-    
-    diff["variables"].forEachRemoved((k,v) {
-      io.writeln("Removed variable: `${variableSignature(v as Map)}`");
-      io.writeln("");
+    DiffNode variables = diff["variables"];
+    if (variables.hasAdded) {
+      io.writeln("New variables:\n");
+      writeCodeblock(() => variables.added.values.map(variableSignature).join("\n"));
+    }
+
+    if (variables.hasRemoved) {
+      io.writeln("Removed variables:\n");
+      writeCodeblock(() => variables.removed.values.map(variableSignature).join("\n"));
+    }
+
+    if (variables.node.isNotEmpty) {
+      variables.node.forEach((k,v) {
+        print("CHANGED: $k, $v");
+      });
+    }
+
+    variables.forEach((k, variable) {
+      if (variable.hasChanged) {
+        variable.forEachChanged((attribute, value) {
+          io.writeln("[$attribute](#) changed from `${value[0]}` to `${value[1]}`\n");
+        });
+      }
     });
   }
   
+  void writeCodeblock(String x()) {
+    io.write("```dart\n${x()}\n```\n\n");
+  }
+
   String h1(String s) {
     return "$s\n${'=' * s.length}\n";
   }
-  
+
   String h2(String s) {
     return "$s\n${'-' * s.length}\n";
   }
-  
+
   void reportEachClassThing(String classCategory, DiffNode d) {
     d.forEachAdded((idx, klass) {
-      io.writeln("New $classCategory '${klass['name']}'");
+      io.writeln("New $classCategory [${klass['name']}](#)");
       io.writeln("");
     });
   }
@@ -121,7 +146,7 @@ class FileReporter {
   void reportEachMethodThing(String methodCategory, DiffNode d) {
     d.forEachAdded((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
-      io.writeln("New ${singularize(methodCategory)} '$k':\n");
+      io.writeln("New ${singularize(methodCategory)} [$k](#):\n");
       io.writeln("```dart");
       io.writeln(methodSignature(v as Map));
       io.writeln("```");
@@ -131,9 +156,9 @@ class FileReporter {
     d.forEachRemoved((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
       if (k == '') { k = diff.metadata['name']; }
-      io.writeln("Removed ${singularize(methodCategory)} '$k':\n");
+      io.writeln("Removed ${singularize(methodCategory)} [$k](#):\n");
       io.writeln("```dart");
-      io.writeln(methodSignature(v as Map, comment: false));
+      io.writeln(methodSignature(v as Map, includeComment: false));
       io.writeln("```");
       io.writeln("");
     });
@@ -150,26 +175,33 @@ class FileReporter {
       att.forEachAdded((k, v) {
         //print("The '$method' in '$methodCategory' has a new $name: '$k': ${pretty(v)}");
         String category = singularize(methodCategory);
-        io.writeln("The '$method' ${category} has a new ${singularize(name)}: `${parameterSignature(v as Map)}`");
+        io.writeln("The [$method](#) ${category} has a new ${singularize(name)}: `${parameterSignature(v as Map)}`");
         io.writeln("");
       });
     });
     
     attributes.forEachChanged((k, v) {
-      io.writeln("The '$method' ${singularize(methodCategory)}'s `${k}` changed:\n");
-      io.writeln("Was: `${(v as List)[0]}`\n");
-      io.writeln("Now: `${(v as List)[1]}`");
+      io.writeln("The [$method](#) ${singularize(methodCategory)}'s `${k}` changed:\n");
+      if (k == "comment") {
+        String was = (v as List<String>)[0].split("\n").map((m) => "> $m").join("\n");
+        io.writeln("Was:\n\n$was\n");
+        String now = (v as List<String>)[1].split("\n").map((m) => "> $m").join("\n");
+        io.writeln("Now:\n\n$now\n");
+      } else {
+        io.writeln("Was: `${(v as List)[0]}`\n");
+        io.writeln("Now: `${(v as List)[1]}`");
+      }
       io.writeln("");
     });
   }
   
   // TODO: just steal this from dartdoc-viewer
-  String methodSignature(Map<String,Object> method, { bool comment: true }) {
+  String methodSignature(Map<String,Object> method, { bool includeComment: true }) {
     String name = method['name'];
     if (name == '') { name = diff.metadata['name']; }
     String s = "${((method['return'] as List)[0] as Map)['outer']} ${name}";
-    if (comment) {
-      s = "/*\n * ${method['comment']}\n */\n$s";
+    if (includeComment) {
+      s = comment(method['comment']) + s;
     }
     List<String> p = new List<String>();
     (method['parameters'] as Map).forEach((k,v) {
@@ -179,6 +211,10 @@ class FileReporter {
     return s;
   }
   
+  String comment(String c) {
+    return c.split("\n").map((String x) => "/// $x\n").join("");
+  }
+
   // TODO: just steal this from dartdoc-viewer
   String parameterSignature(Map<String,Object> parameter) {
     String s = "${((parameter['type'] as List)[0] as Map)['outer']} ${parameter['name']}";
@@ -189,7 +225,7 @@ class FileReporter {
   }
   
   String variableSignature(Map<String,Object> variable) {
-    String s = "${((variable['type'] as List)[0] as Map)['outer']} ${variable['name']}";
+    String s = "${((variable['type'] as List)[0] as Map)['outer']} ${variable['name']};";
     if (variable['final'] == true) {
       s = "final $s";
     }

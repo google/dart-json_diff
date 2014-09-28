@@ -1,6 +1,8 @@
 build/
 packages/
-pubspec.lock  // Except for application packages
+bin/packages
+test/packages
+pubspec.lock
 .buildlog
 .project
 .pub/

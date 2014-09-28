@@ -64,4 +64,12 @@ class DiffNode {
     if (thisNode.isEmpty) { return null; }
     return thisNode;
   }
+
+  get hasAdded => added.isNotEmpty;
+  get hasRemoved => removed.isNotEmpty;
+  get hasChanged => changed.isNotEmpty;
+
+  String toString() {
+    return "added: $added; removed: $removed; changed: $changed";
+  }
 }
