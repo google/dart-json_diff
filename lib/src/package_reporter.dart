@@ -149,9 +149,13 @@ class FileReporter {
       }
     });
   }
-  
+
   void writeCodeblockHr(String s) {
     io.write("```dart\n${s}\n```\n---\n");
+  }
+
+  String comment(String c) {
+    return c.split("\n").map((String x) => "/// $x\n").join("");
   }
 
   String h1(String s) {
@@ -218,26 +222,33 @@ class FileReporter {
   // TODO: just steal this from dartdoc-viewer
   String methodSignature(Map<String,Object> method, { bool includeComment: true }) {
     String name = method['name'];
+    String type = simpleType(method["return"]);
     if (name == '') { name = diff.metadata['name']; }
-    String s = "${((method['return'] as List)[0] as Map)['outer']} ${name}";
+    String s = "$type $name";
     if (includeComment) {
       s = comment(method['comment']) + s;
     }
     List<String> p = new List<String>();
-    (method['parameters'] as Map).forEach((k,v) {
+    (method['parameters'] as Map).forEach((k, v) {
       p.add(parameterSignature(v));
     });
     s = "$s(${p.join(', ')})";
     return s;
   }
-  
-  String comment(String c) {
-    return c.split("\n").map((String x) => "/// $x\n").join("");
+
+  String simpleType(List<Map> t) {
+    // TODO more than the first
+    String type = t[0]['outer'];
+    if (type.startsWith("dart-core.")) {
+      type = type.replaceFirst("dart-core.", "");
+    }
+    return type;
   }
 
   // TODO: just steal this from dartdoc-viewer
   String parameterSignature(Map<String,Object> parameter) {
-    String s = "${((parameter['type'] as List)[0] as Map)['outer']} ${parameter['name']}";
+    String type = simpleType(parameter['type']);
+    String s = "$type ${parameter['name']}";
     if (parameter["optional"] && parameter["named"]) {
       s = "{ $s: ${parameter['default']} }";
     }
@@ -245,7 +256,8 @@ class FileReporter {
   }
   
   String variableSignature(Map<String,Object> variable) {
-    String s = "${((variable['type'] as List)[0] as Map)['outer']} ${variable['name']};";
+    String type = simpleType(variable['type']);
+    String s = "$type ${variable['name']};";
     if (variable['final'] == true) {
       s = "final $s";
     }
