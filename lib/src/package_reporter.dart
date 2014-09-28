@@ -2,10 +2,11 @@ part of shapeshift;
 
 class PackageReporter {
   final Map<String,DiffNode> diff = new Map<String,DiffNode>();
-  //JsonDiffer differ;
-  String leftPath, rightPath;
+  final String leftPath, rightPath, out;
+  IOSink io;
+  String x;
   
-  PackageReporter(this.leftPath, this.rightPath);
+  PackageReporter(this.leftPath, this.rightPath, { this.out });
   
   void calculateDiff(String fileName) {
     File leftFile = new File("$leftPath/$fileName");
@@ -16,6 +17,9 @@ class PackageReporter {
         ..metadata['qualifiedName'] = differ.leftJson['qualifiedName']
         ..metadata['name'] = differ.leftJson['name']
         ..metadata['packageName'] = differ.leftJson['packageName'];
+    if (differ.leftJson['packageName'] != null) {
+      x = differ.leftJson['packageName'];
+    }
   }
 
   void calculateAllDiffs() {
@@ -41,31 +45,40 @@ class PackageReporter {
   }
 
   void report() {
-    diff.forEach((k,v) => reportFile(k));
+    if (out != null) {
+      Directory dir = new Directory(out)..createSync();
+      io = (new File('$out/$x.markdown')..createSync()).openWrite();
+    } else {
+      io = stdout;
+    }
+
+    diff.forEach(reportFile);
   }
   
-  void reportFile(String fileName) {
-    new FileReporter(fileName, diff[fileName]).report();
+  void reportFile(String fileName, DiffNode d) {
+    new FileReporter(fileName, d, io: io).report();
   }
 }
 
 class FileReporter {
-  
+
   final String fileName;
   final DiffNode diff;
-  
-  FileReporter(this.fileName, this.diff);
-  
+  final IOSink io;
+
+  FileReporter(this.fileName, this.diff, { this.io });
+
   void report() {
+
     if (diff.metadata['packageName'] != null) {
-          print(h1(diff.metadata['qualifiedName']));
+          io.writeln(h1(diff.metadata['qualifiedName']));
           reportPackage();
         } else {
-          print(h2(diff.metadata['name']));
+          io.writeln(h2(diff.metadata['name']));
           reportClass();
         }
   }
-  
+
   void reportPackage() {
     // iterate over the class categories
     diff.forEachOf("classes", (k,v) {
@@ -80,13 +93,13 @@ class FileReporter {
     });
     
     diff["variables"].forEachAdded((k,v) {
-      print("New variable: `${variableSignature(v as Map)}`");
-      print("");
+      io.writeln("New variable: `${variableSignature(v as Map)}`");
+      io.writeln("");
     });
     
     diff["variables"].forEachRemoved((k,v) {
-      print("Removed variable: `${variableSignature(v as Map)}`");
-      print("");
+      io.writeln("Removed variable: `${variableSignature(v as Map)}`");
+      io.writeln("");
     });
   }
   
@@ -100,29 +113,29 @@ class FileReporter {
   
   void reportEachClassThing(String classCategory, DiffNode d) {
     d.forEachAdded((idx, klass) {
-      print("New $classCategory '${klass['name']}'");
-      print("");
+      io.writeln("New $classCategory '${klass['name']}'");
+      io.writeln("");
     });
   }
   
   void reportEachMethodThing(String methodCategory, DiffNode d) {
     d.forEachAdded((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
-      print("New ${singularize(methodCategory)} '$k':\n");
-      print("```dart");
-      print(methodSignature(v as Map));
-      print("```");
-      print("");
+      io.writeln("New ${singularize(methodCategory)} '$k':\n");
+      io.writeln("```dart");
+      io.writeln(methodSignature(v as Map));
+      io.writeln("```");
+      io.writeln("");
     });
     
     d.forEachRemoved((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
       if (k == '') { k = diff.metadata['name']; }
-      print("Removed ${singularize(methodCategory)} '$k':\n");
-      print("```dart");
-      print(methodSignature(v as Map, comment: false));
-      print("```");
-      print("");
+      io.writeln("Removed ${singularize(methodCategory)} '$k':\n");
+      io.writeln("```dart");
+      io.writeln(methodSignature(v as Map, comment: false));
+      io.writeln("```");
+      io.writeln("");
     });
           
     // iterate over the methods
@@ -137,16 +150,16 @@ class FileReporter {
       att.forEachAdded((k, v) {
         //print("The '$method' in '$methodCategory' has a new $name: '$k': ${pretty(v)}");
         String category = singularize(methodCategory);
-        print("The '$method' ${category} has a new ${singularize(name)}: `${parameterSignature(v as Map)}`");
-        print("");
+        io.writeln("The '$method' ${category} has a new ${singularize(name)}: `${parameterSignature(v as Map)}`");
+        io.writeln("");
       });
     });
     
     attributes.forEachChanged((k, v) {
-      print("The '$method' ${singularize(methodCategory)}'s `${k}` changed:\n");
-      print("Was: `${(v as List)[0]}`\n");
-      print("Now: `${(v as List)[1]}`");
-      print("");
+      io.writeln("The '$method' ${singularize(methodCategory)}'s `${k}` changed:\n");
+      io.writeln("Was: `${(v as List)[0]}`\n");
+      io.writeln("Now: `${(v as List)[1]}`");
+      io.writeln("");
     });
   }
   
