@@ -3,7 +3,7 @@ part of shapeshift;
 class PackageReporter {
   final Map<String,DiffNode> diff = new Map<String,DiffNode>();
   final String leftPath, rightPath, out;
-  IOSink io;
+  MarkdownWriter io;
   String outFileName;
   
   PackageReporter(this.leftPath, this.rightPath, { this.out });
@@ -58,26 +58,19 @@ class PackageReporter {
       setIo(name);
       reportFile(p.package);
       p.classes.forEach(reportFile);
+      io.close();
     });
   }
   
   void setIo(String packageName) {
     if (out == null) {
-      io = stdout;
+      io = new MarkdownWriter(stdout);
       return;
     }
 
     Directory dir = new Directory(out)..createSync(recursive: true);
-    io = (new File('$out/$packageName.markdown')..createSync(recursive: true)).openWrite();
-    writeMetadata(packageName);
-  }
-  
-  void writeMetadata(String packageName) {
-    io.writeln("""---
-layout: page
-title: $packageName
-permalink: /$packageName/
----""");
+    io = new MarkdownWriter((new File('$out/$packageName.markdown')..createSync(recursive: true)).openWrite());
+    io.writeMetadata(packageName);
   }
 
   void reportFile(DiffNode d) {
@@ -93,17 +86,16 @@ class FileReporter {
 
   final String fileName;
   final DiffNode diff;
-  final IOSink io;
+  final MarkdownWriter io;
 
   FileReporter(this.fileName, this.diff, { this.io });
 
   void report() {
-
     if (diff.metadata['packageName'] != null) {
-      io.writeln(h1(diff.metadata['qualifiedName']));
+      io.bufferH1(diff.metadata['qualifiedName']);
       reportPackage();
     } else {
-      io.writeln(h2(diff.metadata['name']));
+      io.bufferH2(diff.metadata['name']);
       reportClass();
     }
   }
@@ -124,12 +116,12 @@ class FileReporter {
     DiffNode variables = diff["variables"];
     if (variables.hasAdded) {
       io.writeln("New variables:\n");
-      writeCodeblockHr(variables.added.values.map(variableSignature).join("\n"));
+      io.writeCodeblockHr(variables.added.values.map(variableSignature).join("\n"));
     }
 
     if (variables.hasRemoved) {
       io.writeln("Removed variables:\n");
-      writeCodeblockHr(variables.removed.values.map(variableSignature).join("\n"));
+      io.writeCodeblockHr(variables.removed.values.map(variableSignature).join("\n"));
     }
 
     if (variables.hasChanged) {
@@ -150,20 +142,8 @@ class FileReporter {
     });
   }
 
-  void writeCodeblockHr(String s) {
-    io.write("```dart\n${s}\n```\n---\n");
-  }
-
   String comment(String c) {
     return c.split("\n").map((String x) => "/// $x\n").join("");
-  }
-
-  String h1(String s) {
-    return "$s\n${'=' * s.length}\n";
-  }
-
-  String h2(String s) {
-    return "$s\n${'-' * s.length}\n";
   }
 
   void reportEachClassThing(String classCategory, DiffNode d) {
@@ -177,14 +157,14 @@ class FileReporter {
     d.forEachAdded((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
       io.writeln("New ${singularize(methodCategory)} [$k](#):\n");
-      writeCodeblockHr(methodSignature(v as Map));
+      io.writeCodeblockHr(methodSignature(v as Map));
     });
     
     d.forEachRemoved((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
       if (k == '') { k = diff.metadata['name']; }
       io.writeln("Removed ${singularize(methodCategory)} [$k](#):\n");
-      writeCodeblockHr(methodSignature(v as Map, includeComment: false));
+      io.writeCodeblockHr(methodSignature(v as Map, includeComment: false));
     });
           
     // iterate over the methods
