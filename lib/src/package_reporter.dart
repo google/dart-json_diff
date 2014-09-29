@@ -49,9 +49,8 @@ class PackageReporter {
         String subpackage = getSubpackage(node);
         if (!diffsBySubpackage.containsKey(subpackage)) {
           diffsBySubpackage[subpackage] = new PackageSdk();
-        } else {
-          diffsBySubpackage[subpackage].classes.add(node);
         }
+        diffsBySubpackage[subpackage].classes.add(node);
       }
     });
 
@@ -243,16 +242,25 @@ class FileReporter {
   }
   
   void reportEachMethodAttribute(String methodCategory, String method, DiffNode attributes) {
-    attributes.forEach((name, attribute) {
+    attributes.forEach((attributeName, attribute) {
       attribute.forEachAdded((k, v) {
         //print("The '$method' in '$methodCategory' has a new $name: '$k': ${pretty(v)}");
         String category = singularize(methodCategory);
-        io.writeln("The [$method](#) ${category} has a new ${singularize(name)}: `${parameterSignature(v as Map)}`");
+        io.writeln("The [$method](#) ${category} has a new ${singularize(attributeName)}: `${parameterSignature(v as Map)}`");
         io.writeln("\n---\n");
       });
       if (erase) { attribute.added.clear(); }
+      
+      attribute.node.forEach((attributeAttributeName, attributeAttribute) {
+        attributeAttribute.forEachChanged((key, oldNew) {
+          String category = singularize(methodCategory);
+          io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)} has a changed $key: `${oldNew[0]}` to `${oldNew[1]}`");
+          io.writeln("\n---\n");
+        });
+        if (erase) { attributeAttribute.changed.clear(); }
+      });
     });
-    
+
     attributes.forEachChanged((String key, List oldNew) {
       io.writeln("The [$method](#) ${singularize(methodCategory)}'s `${key}` changed:\n");
       if (key == "comment") {
