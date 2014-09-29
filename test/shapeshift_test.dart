@@ -120,6 +120,47 @@ void main() {
     expect(node.node["a"].removed, isEmpty);
     expect(node.node["a"].changed, isEmpty);
   });
+
+  test('JsonDiffer diff() with multiple new values in the middle of a list', () {
+    differ = new JsonDiffer('{"a": [1,2]}', '{"a": [1,4,8,2]}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, hasLength(1));
+    expect(node.node["a"].added, hasLength(2));
+    expect(node.node["a"].added["1"], equals(4));
+    expect(node.node["a"].added["2"], equals(8));
+    expect(node.node["a"].removed, isEmpty);
+    expect(node.node["a"].changed, isEmpty);
+  });
+
+  test('JsonDiffer diff() with a new value at the start of a list', () {
+    differ = new JsonDiffer('{"a": [1,2]}', '{"a": [4,1,2]}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, hasLength(1));
+    expect(node.node["a"].added, hasLength(1));
+    expect(node.node["a"].added["0"], equals(4));
+    expect(node.node["a"].removed, isEmpty);
+    expect(node.node["a"].changed, isEmpty);
+  });
+
+  test('JsonDiffer diff() with multiple new values at the start of a list', () {
+    differ = new JsonDiffer('{"a": [1,2]}', '{"a": [4,8,1,2]}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, hasLength(1));
+    expect(node.node["a"].added, hasLength(2));
+    expect(node.node["a"].added["0"], equals(4));
+    expect(node.node["a"].added["1"], equals(8));
+    expect(node.node["a"].removed, isEmpty);
+    expect(node.node["a"].changed, isEmpty);
+  });
 }
 
 String jsonFrom(Map<String,Object> obj) {

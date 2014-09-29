@@ -51,7 +51,7 @@ class JsonDiffer {
       
       Object rightValue = right[key];
       if (leftValue is List && rightValue is List) {
-        Map<String,Object> leftListAsMap = new Map<String,Object>();
+        /*Map<String,Object> leftListAsMap = new Map<String,Object>();
         Map<String,Object> rightListAsMap = new Map<String,Object>();
         for (int i = 0; i < leftValue.length; i++) {
           leftListAsMap[i.toString()] = leftValue[i];
@@ -59,7 +59,8 @@ class JsonDiffer {
         for (int i = 0; i < rightValue.length; i++) {
           rightListAsMap[i.toString()] = rightValue[i];
         }
-        node[key] = diffObjects(leftListAsMap, rightListAsMap);
+        node[key] = diffObjects(leftListAsMap, rightListAsMap);*/
+        node[key] = diffLists(leftValue, rightValue);
       } else if (leftValue is Map && rightValue is Map) {
         node[key] = diffObjects(leftValue, rightValue);
       } else if (leftValue != rightValue) {
@@ -75,6 +76,57 @@ class JsonDiffer {
       }
     });
     
+    return node;
+  }
+
+  DiffNode diffLists(List<Object> left, List<Object> right) {
+    DiffNode node = new DiffNode();
+    int leftHand = 0;
+    int leftFoot = 0;
+    int rightHand = 0;
+    int rightFoot = 0;
+    while (leftHand < left.length && rightHand < right.length) {
+      if (left[leftHand] != right[rightHand]) {
+        // Walk hands up one at a time. Feet keep track of where we were.
+        while (true) {
+          rightHand++;
+          if (rightHand < right.length && left[leftFoot] == right[rightHand]) {
+            // Found it: the right elements at [rightFoot, rightHand-1] were added in right.
+            for (int i=rightFoot; i<rightHand; i++) {
+              node.added[i.toString()] = right[i];
+            }
+            rightFoot = rightHand;
+            leftHand = leftFoot;
+            break;
+          }
+
+          leftHand++;
+          if (leftHand < left.length && left[leftHand] == right[rightFoot]) {
+            // Found it: The left elements at [leftFoot, leftHand-1] were removed from left.
+            for (int i=leftFoot; i<leftHand; i++) {
+              node.removed[i.toString()] = left[i];
+            }
+            leftFoot = leftHand;
+            rightHand = rightFoot;
+            break;
+          }
+
+          if (leftHand >= left.length && rightHand >= right.length) { break; }
+        }
+      }
+      leftHand++; rightHand++; leftFoot++; rightFoot++;
+    }
+
+    // Any new elements at the end of right.
+    for (int i=rightHand; i<right.length; i++) {
+      node.added[i.toString()] = right[i];
+    }
+
+    // Any removed elements at the end of left.
+    for (int i=leftHand; i<left.length; i++) {
+      node.removed[i.toString()] = left[i];
+    }
+
     return node;
   }
 }
