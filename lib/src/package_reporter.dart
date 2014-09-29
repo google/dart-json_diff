@@ -27,6 +27,7 @@ class PackageReporter {
 
     leftLs.forEach((String file) {
       file = file.split('/').last;
+      print("Diffing $file");
       calculateDiff(file);
     });
   }
@@ -45,7 +46,6 @@ class PackageReporter {
         if (!diffsBySubpackage.containsKey(subpackage)) {
           diffsBySubpackage[subpackage] = new PackageSdk();
         } else {
-          print(node);
           diffsBySubpackage[subpackage].classes.add(node);
         }
       }
@@ -84,6 +84,7 @@ class FileReporter {
   final String fileName;
   final DiffNode diff;
   final MarkdownWriter io;
+  final bool erase = true;
 
   FileReporter(this.fileName, this.diff, { this.io });
 
@@ -95,6 +96,12 @@ class FileReporter {
       io.bufferH2("class ${diff.metadata["name"]}");
       reportClass();
     }
+    
+    // After reporting, prune and print anything remaining.
+    diff.prune();
+    diff.metadata.clear();
+    String ds = diff.toString();
+    if (ds.isNotEmpty) { print(ds); }
   }
 
   void reportPackage() {
@@ -111,32 +118,44 @@ class FileReporter {
     });
     
     DiffNode variables = diff["variables"];
-    if (variables.hasAdded) {
-      io.writeln("New variables:\n");
-      io.writeCodeblockHr(variables.added.values.map(variableSignature).join("\n"));
-    }
+    if (variables != null) {
+      if (variables.hasAdded) {
+        io.writeln("New variables:\n");
+        io.writeCodeblockHr(variables.added.values.map(variableSignature).join("\n"));
+      }
+      if (erase) { variables.added.clear(); }
 
-    if (variables.hasRemoved) {
-      io.writeln("Removed variables:\n");
-      io.writeCodeblockHr(variables.removed.values.map(variableSignature).join("\n"));
-    }
+      if (variables.hasRemoved) {
+        io.writeln("Removed variables:\n");
+        io.writeCodeblockHr(variables.removed.values.map(variableSignature).join("\n"));
+      }
+      if (erase) { variables.removed.clear(); }
 
-    if (variables.hasChanged) {
-      variables.forEachChanged((k,v) {
-        print("CHANGED: $k, $v");
-      });
-    }
-
-    variables.forEach((k, variable) {
-      if (variable.hasChanged) {
-        variable.forEachChanged((attribute, value) {
-          io.writeln("The [$attribute](#) variable changed:\n");
-          io.writeln("Was: `${value[0]}`\n");
-          io.writeln("Now: `${value[1]}`\n");
-          io.writeln("---\n");
+      if (variables.hasChanged) {
+        variables.forEachChanged((k,v) {
+          print("CHANGED: $k, $v");
         });
       }
-    });
+
+      variables.forEach((key, variable) {
+        if (variable.hasChanged) {
+          variable.forEachChanged((attribute, value) {
+            io.writeln("The [$key](#) variable's `$attribute` changed:\n");
+            io.writeln("Was: `${value[0]}`\n");
+            io.writeln("Now: `${value[1]}`\n");
+            io.writeln("---\n");
+          });
+        }
+        if (erase) { variable.changed.clear(); }
+        
+        if (variable.node.isNotEmpty) {
+          variable.node.forEach((s, dn) {
+            io.writeBad("The [$key](#) variable's `$s` has changed:\n", dn.toString(pretty: false));
+          });
+        }
+        if (erase) { variable.node.clear(); }
+      });
+    }
   }
 
   String comment(String c) {
@@ -148,6 +167,7 @@ class FileReporter {
       io.writeln("New $classCategory [${klass['name']}](#)");
       io.writeln("\n---\n");
     });
+    if (erase) { d.added.clear(); }
   }
   
   void reportEachMethodThing(String methodCategory, DiffNode d) {
@@ -156,6 +176,7 @@ class FileReporter {
       io.writeln("New ${singularize(methodCategory)} [$k](#):\n");
       io.writeCodeblockHr(methodSignature(v as Map));
     });
+    if (erase) { d.added.clear(); }
     
     d.forEachRemoved((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
@@ -163,11 +184,12 @@ class FileReporter {
       io.writeln("Removed ${singularize(methodCategory)} [$k](#):\n");
       io.writeCodeblockHr(methodSignature(v as Map, includeComment: false));
     });
+    if (erase) { d.removed.clear(); }
           
     // iterate over the methods
-    d.forEach((k2,v2) {
+    d.forEach((k, v) {
       // for a method, iterate over its attributes
-      reportEachMethodAttribute(methodCategory, k2, v2);
+      reportEachMethodAttribute(methodCategory, k, v);
     });
   }
   
@@ -179,6 +201,7 @@ class FileReporter {
         io.writeln("The [$method](#) ${category} has a new ${singularize(name)}: `${parameterSignature(v as Map)}`");
         io.writeln("\n---\n");
       });
+      if (erase) { att.added.clear(); }
     });
     
     attributes.forEachChanged((k, v) {
@@ -194,6 +217,7 @@ class FileReporter {
       }
       io.writeln("\n---\n");
     });
+    if (erase) { attributes.changed.clear(); }
   }
   
   // TODO: just steal this from dartdoc-viewer

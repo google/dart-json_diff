@@ -35,7 +35,9 @@ class JsonDiffer {
     Map<String,Object> removed = new Map<String,Object>();
     Map<String,Object> changed = new Map<String,Object>();
     
-    return diffObjects(leftJson, rightJson);
+    DiffNode d = diffObjects(leftJson, rightJson);
+    d.prune();
+    return d;
   }
   
   DiffNode diffObjects(Map<String,Object> left, Map<String,Object> right) {

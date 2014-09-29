@@ -29,6 +29,12 @@ class MarkdownWriter {
     io.writeln(s);
   }
   
+  void writeBad(String s, String s2) {
+    io..writeln("<p style='color: red;'>$s</p>")
+        ..writeln("<pre><code style='color: red;'>$s2</code></pre>")
+        ..writeln("<hr />");
+  }
+  
   void writeBlockquote(String s) {
     io.writeln(s.split("\n").map((m) => "> $m\n").join());
   }

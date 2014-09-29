@@ -76,37 +76,45 @@ class DiffNode {
   get hasAdded => added.isNotEmpty;
   get hasRemoved => removed.isNotEmpty;
   get hasChanged => changed.isNotEmpty;
-
-  String toString([String gap=""]) {
-    // TODO: This method is a million lines of code because there is not proper pruning in DiffNode.
-    Map<String,String> nodeToStrings = new Map();
-    if (node != null) {
-      node.forEach((String key, DiffNode d) {
-        String ds = d.toString(gap+"    ");
-        if (ds.isNotEmpty) { nodeToStrings[key] = d.toString(gap+"    "); }
-      });
+  get hasNothing => added.isEmpty && removed.isEmpty && changed.isEmpty && node.isEmpty;
+  
+  /// Prune the DiffNode tree. If a DiffNode has nothing added, removed,
+  /// changed, nor a node, then will be deleted.
+  void prune() {
+    List<String> keys = node.keys.toList();
+    for (int i=keys.length-1; i>=0; i--) {
+      String key = keys[i];
+      DiffNode d = node[key];
+      d.prune();
+      if (d.hasNothing) { node.remove(key); }
     }
-    if (metadata.isEmpty && added.isEmpty && removed.isEmpty && changed.isEmpty && nodeToStrings.values.join().isEmpty) {
-      return "";
-    }
+  }
 
-    String result = "\n";
+  String toString({String gap: "", bool pretty: true}) {
+    String result = "";
+    String nl = "\n";
+    String ss = "  ";
+    if (!pretty) {
+      nl = "";
+      gap = "";
+      ss = "";
+    }
     if (metadata.isNotEmpty) {
-      result += "$gap  metadata: $metadata,\n";
+      result += "$nl${gap}metadata: $metadata,";
     }
     if (added.isNotEmpty) {
-      result += "$gap  added: $added,\n";
+      result += "$nl${gap}added: $added,";
     }
     if (removed.isNotEmpty) {
-      result += "$gap  removed: $removed,\n";
+      result += "$nl${gap}removed: $removed,";
     }
     if (changed.isNotEmpty) {
-      result += "$gap  changed: $changed,\n";
+      result += "$nl${gap}changed: $changed,";
     }
-    if (nodeToStrings.values.join().isNotEmpty) {
-      result += "$gap  node: {\n";
-      nodeToStrings.forEach((key, s) => result += "$gap    $key: $s");
-      result += "$gap  }\n";
+    if (node.isNotEmpty) {
+      result += "$nl${gap}{$nl";
+      node.forEach((key, d) => result += "$gap${ss}$key: ${d.toString(gap: gap+"    ", pretty: pretty)}");
+      result += "$nl${gap}}";
     }
     return result;
   }
