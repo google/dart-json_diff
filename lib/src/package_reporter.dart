@@ -19,17 +19,17 @@ class PackageReporter {
   }
 
   void calculateAllDiffs() {
-    List<FileSystemEntity> leftRawLs = new Directory(leftPath).listSync(recursive: true);
-    List<String> leftLs = leftRawLs
+    List<FileSystemEntity> rightRawLs = new Directory(rightPath).listSync(recursive: true);
+    List<String> rightLs = rightRawLs
         .where((FileSystemEntity f) => f is File)
         .map((File f) => f.path)
         .toList();
 
     int i = 0;
-    leftLs.forEach((String file) {
+    rightLs.forEach((String file) {
       i += 1;
-      if (i < 250) {
-        file = file.replaceFirst(leftPath, "");
+      if (i < 100) {
+        file = file.replaceFirst(rightPath, "");
         print("$i: diffing $file");
         calculateDiff(file);
       }
@@ -116,14 +116,16 @@ class FileReporter {
 
   void reportPackage() {
     if (diff.changed.containsKey("packageIntro")) {
-      io.writeBad("TODO: The packageIntro changed, which is probably huge. Not including here yet.", "");
+      io.writeBad("TODO: The <strong>packageIntro</strong> changed, which is probably huge. Not including here yet.", "");
       diff.changed.remove("packageIntro");
     }
 
     // iterate over the class categories
-    diff.forEachOf("classes", (k,v) {
-      reportEachClassThing(k, v);
+    diff.forEachOf("classes", (String classCategory, DiffNode d) {
+      reportEachClassThing(classCategory, d);
     });
+    
+    diff.forEachOf("functions", reportEachMethodThing);
   }
 
   void reportClass() {
@@ -148,55 +150,60 @@ class FileReporter {
     }
 
     // iterate over the method categories
-    diff.forEachOf("methods", (k,v) {
-      reportEachMethodThing(k, v);
+    diff.forEachOf("methods", (String methodCategory, DiffNode d) {
+      reportEachMethodThing(methodCategory, d);
     });
-    diff.forEachOf("inheritedMethods", (k,v) {
-      reportEachMethodThing(k, v, parenthetical: "inherited");
+
+    diff.forEachOf("inheritedMethods", (String methodCategory, DiffNode d) {
+      reportEachMethodThing(methodCategory, d, parenthetical: "inherited");
     });
-    
-    DiffNode variables = diff["variables"];
-    if (variables != null) {
-      if (variables.hasAdded) {
-        io.writeln("New variables:\n");
-        io.writeCodeblockHr(variables.added.values.map(variableSignature).join("\n"));
-      }
-      if (erase) { variables.added.clear(); }
 
-      if (variables.hasRemoved) {
-        io.writeln("Removed variables:\n");
-        io.writeCodeblockHr(variables.removed.values.map(variableSignature).join("\n"));
-      }
-      if (erase) { variables.removed.clear(); }
-
-      if (variables.hasChanged) {
-        variables.forEachChanged((k,v) {
-          print("CHANGED: $k, $v");
-        });
-      }
-
-      variables.forEach((key, variable) {
-        if (variable.hasChanged) {
-          variable.forEachChanged((attribute, value) {
-            io.writeln("The [$key](#) variable's `$attribute` changed:\n");
-            io.writeln("Was: `${value[0]}`\n");
-            io.writeln("Now: `${value[1]}`\n");
-            io.writeln("---\n");
-          });
-        }
-        if (erase) { variable.changed.clear(); }
-        
-        if (variable.node.isNotEmpty) {
-          variable.node.forEach((s, dn) {
-            print("BAD WRITING?");
-            io.writeBad("TODO: The [$key](#) variable's `$s` has changed:\n", dn.toString(pretty: false));
-          });
-        }
-        if (erase) { variable.node.clear(); }
-      });
-    }
+    reportVariables("variables");
+    reportVariables("inheritedVariables");
   }
   
+  void reportVariables(String key) {
+    if (!diff.containsKey(key)) { return; }
+    DiffNode variables = diff[key];
+
+    if (variables.hasAdded) {
+      io.writeln("New variables:\n");
+      io.writeCodeblockHr(variables.added.values.map(variableSignature).join("\n"));
+    }
+    if (erase) { variables.added.clear(); }
+
+    if (variables.hasRemoved) {
+      io.writeln("Removed variables:\n");
+      io.writeCodeblockHr(variables.removed.values.map(variableSignature).join("\n"));
+    }
+    if (erase) { variables.removed.clear(); }
+
+    if (variables.hasChanged) {
+      variables.forEachChanged((k,v) {
+        print("CHANGED: $k, $v");
+      });
+    }
+
+    variables.forEach((key, variable) {
+      if (variable.hasChanged) {
+        variable.forEachChanged((attribute, value) {
+          io.writeln("The [$key](#) variable's `$attribute` changed:\n");
+          io.writeln("Was: `${value[0]}`\n");
+          io.writeln("Now: `${value[1]}`\n");
+          io.writeln("---\n");
+        });
+      }
+      if (erase) { variable.changed.clear(); }
+
+      if (variable.node.isNotEmpty) {
+        variable.node.forEach((s, dn) {
+          io.writeBad("TODO: The [$key](#) variable's `$s` has changed:\n", dn.toString(pretty: false));
+        });
+      }
+      if (erase) { variable.node.clear(); }
+    });
+  }
+
   void reportList(String key, DiffNode d) {
     d[key].forEachAdded((String idx, String el) {
       io.writeln("New $key at index $idx: ${el}");
@@ -215,13 +222,19 @@ class FileReporter {
       io.writeln("\n---\n");
     });
     if (erase) { d.added.clear(); }
+
+    d.forEach((String s, DiffNode classThing) {
+      io.writeBad("TODO: changed $classCategory $s:", classThing.toString());
+    });
+    d.node.clear();
   }
   
   void reportEachMethodThing(String methodCategory, DiffNode d, { String parenthetical:""}) {
+    String category = singularize(methodCategory);
     if (parenthetical.isNotEmpty) { parenthetical = " _($parenthetical)_"; }
     d.forEachAdded((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
-      io.writeln("New ${singularize(methodCategory)}$parenthetical [$k](#):\n");
+      io.writeln("New $category$parenthetical [$k](#):\n");
       io.writeCodeblockHr(methodSignature(v as Map));
     });
     if (erase) { d.added.clear(); }
@@ -229,7 +242,7 @@ class FileReporter {
     d.forEachRemoved((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
       if (k == '') { k = diff.metadata['name']; }
-      io.writeln("Removed ${singularize(methodCategory)}$parenthetical [$k](#):\n");
+      io.writeln("Removed $category$parenthetical [$k](#):\n");
       io.writeCodeblockHr(methodSignature(v as Map, includeComment: false));
     });
     if (erase) { d.removed.clear(); }
@@ -237,27 +250,26 @@ class FileReporter {
     // iterate over the methods
     d.forEach((method, attributes) {
       // for a method, iterate over its attributes
-      reportEachMethodAttribute(methodCategory, method, attributes);
+      reportEachMethodAttribute(category, method, attributes);
     });
   }
   
-  void reportEachMethodAttribute(String methodCategory, String method, DiffNode attributes) {
+  void reportEachMethodAttribute(String category, String method, DiffNode attributes) {
     attributes.forEach((attributeName, attribute) {
       attribute.forEachAdded((k, v) {
         //print("The '$method' in '$methodCategory' has a new $name: '$k': ${pretty(v)}");
-        String category = singularize(methodCategory);
         io.writeln("The [$method](#) ${category} has a new ${singularize(attributeName)}: `${parameterSignature(v as Map)}`");
         io.writeln("\n---\n");
       });
       if (erase) { attribute.added.clear(); }
       
       attribute.node.forEach((attributeAttributeName, attributeAttribute) {
-        reportEachMethodAttributeAttribute(methodCategory, method, attributeName, attributeAttributeName, attributeAttribute);
+        reportEachMethodAttributeAttribute(category, method, attributeName, attributeAttributeName, attributeAttribute);
       });
     });
 
     attributes.forEachChanged((String key, List oldNew) {
-      io.writeln("The [$method](#) ${singularize(methodCategory)}'s `${key}` changed:\n");
+      io.writeln("The [$method](#) $category's `${key}` changed:\n");
       if (key == "comment") {
         io..writeln("Was:\n")
             ..writeBlockquote((oldNew as List<String>)[0])
@@ -272,23 +284,21 @@ class FileReporter {
     if (erase) { attributes.changed.clear(); }
   }
   
-  void reportEachMethodAttributeAttribute(String methodCategory,
+  void reportEachMethodAttributeAttribute(String category,
                                           String method,
                                           String attributeName,
                                           String attributeAttributeName,
                                           DiffNode attributeAttribute) {
     attributeAttribute.forEachChanged((key, oldNew) {
-      String category = singularize(methodCategory);
-      io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)} has a changed $key: `${oldNew[0]}` to `${oldNew[1]}`");
+      io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)} has a changed $key from `${oldNew[0]}` to `${oldNew[1]}`");
       io.writeln("\n---\n");
     });
     if (erase) { attributeAttribute.changed.clear(); }
 
     if (attributeAttribute.containsKey("type")) {
-      String category = singularize(methodCategory);
       String key = "type";
       List<String> oldNew = attributeAttribute[key]["0"].changed["outer"];
-      io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)} has a changed $key: `${oldNew[0]}` to `${oldNew[1]}`");
+      io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)}'s $key has changed from `${oldNew[0]}` to `${oldNew[1]}`");
       io.writeln("\n---\n");
       attributeAttribute.node.remove("type");
     }
