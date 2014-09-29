@@ -78,15 +78,19 @@ class DiffNode {
   get hasChanged => changed.isNotEmpty;
 
   String toString([String gap=""]) {
+    // TODO: This method is a million lines of code because there is not proper pruning in DiffNode.
     Map<String,String> nodeToStrings = new Map();
     if (node != null) {
-      node.forEach((String key, DiffNode d) { nodeToStrings[key] = d.toString(gap+"    "); });
+      node.forEach((String key, DiffNode d) {
+        String ds = d.toString(gap+"    ");
+        if (ds.isNotEmpty) { nodeToStrings[key] = d.toString(gap+"    "); }
+      });
     }
     if (metadata.isEmpty && added.isEmpty && removed.isEmpty && changed.isEmpty && nodeToStrings.values.join().isEmpty) {
       return "";
     }
 
-    String result = "{\n";
+    String result = "\n";
     if (metadata.isNotEmpty) {
       result += "$gap  metadata: $metadata,\n";
     }
@@ -99,13 +103,10 @@ class DiffNode {
     if (changed.isNotEmpty) {
       result += "$gap  changed: $changed,\n";
     }
-    if (nodeToStrings.isNotEmpty) {
+    if (nodeToStrings.values.join().isNotEmpty) {
       result += "$gap  node: {\n";
-      nodeToStrings.forEach((String key, String s) {
-        if (s.isNotEmpty) {
-          result += "$gap    $key: $s\n";
-        }
-      });
+      nodeToStrings.forEach((key, s) => result += "$gap    $key: $s");
+      result += "$gap  }\n";
     }
     return result;
   }
