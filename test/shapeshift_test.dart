@@ -63,6 +63,19 @@ void main() {
     expect(node.node, isEmpty);
   });
 
+  test('JsonDiffer diff() with a deep new value', () {
+    differ = new JsonDiffer('{"a": {"x": 1}}', '{"a": {"x": 1, "y": {"p": 2}}}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, hasLength(1));
+    expect(node.node["a"].added, hasLength(1));
+    expect(node.node["a"].added["y"], equals({"p": 2}));
+    expect(node.node["a"].removed, isEmpty);
+    expect(node.node["a"].changed, isEmpty);
+  });
+
   test('JsonDiffer diff() with a removed value', () {
     differ = new JsonDiffer('{"a": 1, "b": 2}', '{"a": 1}');
     DiffNode node = differ.diff();
@@ -92,7 +105,7 @@ void main() {
     expect(node.node, hasLength(1));
     DiffNode innerNode = node.node["a"];
     expect(innerNode.changed, hasLength(1));
-    expect(innerNode.changed["x"], equals([1,2]));
+    expect(innerNode.changed["x"], equals([1, 2]));
   });
 
   test('JsonDiffer diff() with a new value at the end of a list', () {
@@ -160,6 +173,20 @@ void main() {
     expect(node.node["a"].added["1"], equals(8));
     expect(node.node["a"].removed, isEmpty);
     expect(node.node["a"].changed, isEmpty);
+  });
+
+  test('JsonDiffer diff() with a changed value at the start of a list', () {
+    differ = new JsonDiffer('{"a": [{"b": 1}]}', '{"a": [{"b": 2}]}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, hasLength(1));
+    expect(node.node["a"].added, isEmpty);
+    expect(node.node["a"].removed, isEmpty);
+    expect(node.node["a"].changed, isEmpty);
+    expect(node.node["a"].node["0"].changed, hasLength(1));
+    expect(node.node["a"].node["0"].changed["b"], equals([1, 2]));
   });
 }
 

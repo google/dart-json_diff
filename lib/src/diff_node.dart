@@ -40,7 +40,7 @@ class DiffNode {
     }
   }
   
-  void forEachAdded(void ffn(String s, List<Object> o)) {
+  void forEachAdded(void ffn(String s, Object o)) {
     added.forEach(ffn);
   }
   

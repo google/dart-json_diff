@@ -87,6 +87,7 @@ class JsonDiffer {
     int rightFoot = 0;
     while (leftHand < left.length && rightHand < right.length) {
       if (left[leftHand] != right[rightHand]) {
+        bool foundMissing = false;
         // Walk hands up one at a time. Feet keep track of where we were.
         while (true) {
           rightHand++;
@@ -97,6 +98,7 @@ class JsonDiffer {
             }
             rightFoot = rightHand;
             leftHand = leftFoot;
+            foundMissing = true;
             break;
           }
 
@@ -108,10 +110,26 @@ class JsonDiffer {
             }
             leftFoot = leftHand;
             rightHand = rightFoot;
+            foundMissing = true;
             break;
           }
 
           if (leftHand >= left.length && rightHand >= right.length) { break; }
+        }
+
+        if (!foundMissing) {
+          // Never found left[leftFoot] in right, nor right[rightFoot] in left.
+          // This must just be a changed value.
+          // TODO: This notation is wrong for a case such as:
+          //     [1,2,3,4,5,6] => [1,4,5,7]
+          //     changed.first = [[5, 6], [3,7]
+          if (left[leftFoot] is Map && right[rightFoot] is Map) {
+            node[leftFoot.toString()] = diffObjects(left[leftFoot], right[rightFoot]);
+          } else if (left[leftFoot] is List && right[rightFoot] is List) {
+            node[leftFoot.toString()] = diffLists(left[leftFoot], right[rightFoot]);
+          } else {
+            node.changed[leftFoot.toString()] = [left[leftFoot], right[rightFoot]];
+          }
         }
       }
       leftHand++; rightHand++; leftFoot++; rightFoot++;

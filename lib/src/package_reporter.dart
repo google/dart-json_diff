@@ -28,7 +28,7 @@ class PackageReporter {
     int i = 0;
     leftLs.forEach((String file) {
       i += 1;
-      if (i < 120) {
+      if (i < 250) {
         file = file.replaceFirst(leftPath, "");
         print("$i: diffing $file");
         calculateDiff(file);
@@ -116,6 +116,11 @@ class FileReporter {
   }
 
   void reportPackage() {
+    if (diff.changed.containsKey("packageIntro")) {
+      io.writeBad("TODO: The packageIntro changed, which is probably huge. Not including here yet.", "");
+      diff.changed.remove("packageIntro");
+    }
+
     // iterate over the class categories
     diff.forEachOf("classes", (k,v) {
       reportEachClassThing(k, v);
@@ -137,6 +142,10 @@ class FileReporter {
         }
       });
       diff.changed.clear();
+    }
+
+    if (diff.containsKey("subclass")) {
+      reportList("subclass", diff);
     }
 
     // iterate over the method categories
@@ -180,12 +189,20 @@ class FileReporter {
         
         if (variable.node.isNotEmpty) {
           variable.node.forEach((s, dn) {
-            io.writeBad("The [$key](#) variable's `$s` has changed:\n", dn.toString(pretty: false));
+            print("BAD WRITING?");
+            io.writeBad("TODO: The [$key](#) variable's `$s` has changed:\n", dn.toString(pretty: false));
           });
         }
         if (erase) { variable.node.clear(); }
       });
     }
+  }
+  
+  void reportList(String key, DiffNode d) {
+    d[key].forEachAdded((String idx, String el) {
+      io.writeln("New $key at index $idx: ${el}");
+    });
+    if (erase) { d[key].added.clear(); }
   }
 
   String comment(String c) {
@@ -219,21 +236,21 @@ class FileReporter {
     if (erase) { d.removed.clear(); }
           
     // iterate over the methods
-    d.forEach((k, v) {
+    d.forEach((method, attributes) {
       // for a method, iterate over its attributes
-      reportEachMethodAttribute(methodCategory, k, v);
+      reportEachMethodAttribute(methodCategory, method, attributes);
     });
   }
   
   void reportEachMethodAttribute(String methodCategory, String method, DiffNode attributes) {
-    attributes.forEach((name, att) {
-      att.forEachAdded((k, v) {
+    attributes.forEach((name, attribute) {
+      attribute.forEachAdded((k, v) {
         //print("The '$method' in '$methodCategory' has a new $name: '$k': ${pretty(v)}");
         String category = singularize(methodCategory);
         io.writeln("The [$method](#) ${category} has a new ${singularize(name)}: `${parameterSignature(v as Map)}`");
         io.writeln("\n---\n");
       });
-      if (erase) { att.added.clear(); }
+      if (erase) { attribute.added.clear(); }
     });
     
     attributes.forEachChanged((String key, List oldNew) {
