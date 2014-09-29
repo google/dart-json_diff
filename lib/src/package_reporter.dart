@@ -19,16 +19,20 @@ class PackageReporter {
   }
 
   void calculateAllDiffs() {
-    List<FileSystemEntity> leftRawLs = new Directory(leftPath).listSync();
+    List<FileSystemEntity> leftRawLs = new Directory(leftPath).listSync(recursive: true);
     List<String> leftLs = leftRawLs
         .where((FileSystemEntity f) => f is File)
         .map((File f) => f.path)
         .toList();
 
+    int i = 0;
     leftLs.forEach((String file) {
-      file = file.split('/').last;
-      print("Diffing $file");
-      calculateDiff(file);
+      i += 1;
+      if (i < 120) {
+        file = file.replaceFirst(leftPath, "");
+        print("$i: diffing $file");
+        calculateDiff(file);
+      }
     });
   }
 
@@ -53,12 +57,12 @@ class PackageReporter {
 
     diffsBySubpackage.forEach((String name, PackageSdk p) {
       setIo(name);
-      reportFile(p.package);
-      p.classes.forEach(reportFile);
+      reportFile(name, p.package);
+      p.classes.forEach((k) => reportFile(name, k));
       io.close();
     });
   }
-  
+
   void setIo(String packageName) {
     if (out == null) {
       io = new MarkdownWriter(stdout);
@@ -70,10 +74,10 @@ class PackageReporter {
     io.writeMetadata(packageName);
   }
 
-  void reportFile(DiffNode d) {
-    new FileReporter("xxx", d, io: io).report();
+  void reportFile(String name, DiffNode d) {
+    new FileReporter(name, d, io: io).report();
   }
-  
+
   String getSubpackage(DiffNode node) {
     return (node.metadata["qualifiedName"]).split('.')[0];
   }
@@ -89,6 +93,9 @@ class FileReporter {
   FileReporter(this.fileName, this.diff, { this.io });
 
   void report() {
+    if (diff == null) {
+      return;
+    }
     if (diff.metadata['packageName'] != null) {
       io.bufferH1(diff.metadata['qualifiedName']);
       reportPackage();
@@ -96,12 +103,16 @@ class FileReporter {
       io.bufferH2("class ${diff.metadata["name"]}");
       reportClass();
     }
-    
+
     // After reporting, prune and print anything remaining.
     diff.prune();
+    String qn = diff.metadata["qualifiedName"];
     diff.metadata.clear();
     String ds = diff.toString();
-    if (ds.isNotEmpty) { print(ds); }
+    if (ds.isNotEmpty) {
+      print("${qn} HAS UNRESOLVED NODES:");
+      print(ds);
+    }
   }
 
   void reportPackage() {
@@ -110,11 +121,30 @@ class FileReporter {
       reportEachClassThing(k, v);
     });
   }
-  
+
   void reportClass() {
+    if (diff.hasChanged) {
+      diff.forEachChanged((String key, List oldNew) {
+        io.writeln("${diff.metadata["name"]}'s `${key}` changed:\n");
+        if (key == "comment") {
+          io..writeln("Was:\n")
+              ..writeBlockquote((oldNew as List<String>)[0])
+              ..writeln("Now:\n")
+              ..writeBlockquote((oldNew as List<String>)[1]);
+        } else {
+          io.writeln("Was: `${oldNew[0]}`\n");
+          io.writeln("Now: `${oldNew[1]}`");
+        }
+      });
+      diff.changed.clear();
+    }
+
     // iterate over the method categories
     diff.forEachOf("methods", (k,v) {
       reportEachMethodThing(k, v);
+    });
+    diff.forEachOf("inheritedMethods", (k,v) {
+      reportEachMethodThing(k, v, parenthetical: "inherited");
     });
     
     DiffNode variables = diff["variables"];
@@ -159,6 +189,7 @@ class FileReporter {
   }
 
   String comment(String c) {
+    if (c.isEmpty) { return ""; }
     return c.split("\n").map((String x) => "/// $x\n").join("");
   }
 
@@ -170,10 +201,11 @@ class FileReporter {
     if (erase) { d.added.clear(); }
   }
   
-  void reportEachMethodThing(String methodCategory, DiffNode d) {
+  void reportEachMethodThing(String methodCategory, DiffNode d, { String parenthetical:""}) {
+    if (parenthetical.isNotEmpty) { parenthetical = " _($parenthetical)_"; }
     d.forEachAdded((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
-      io.writeln("New ${singularize(methodCategory)} [$k](#):\n");
+      io.writeln("New ${singularize(methodCategory)}$parenthetical [$k](#):\n");
       io.writeCodeblockHr(methodSignature(v as Map));
     });
     if (erase) { d.added.clear(); }
@@ -181,7 +213,7 @@ class FileReporter {
     d.forEachRemoved((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
       if (k == '') { k = diff.metadata['name']; }
-      io.writeln("Removed ${singularize(methodCategory)} [$k](#):\n");
+      io.writeln("Removed ${singularize(methodCategory)}$parenthetical [$k](#):\n");
       io.writeCodeblockHr(methodSignature(v as Map, includeComment: false));
     });
     if (erase) { d.removed.clear(); }
@@ -204,16 +236,16 @@ class FileReporter {
       if (erase) { att.added.clear(); }
     });
     
-    attributes.forEachChanged((k, v) {
-      io.writeln("The [$method](#) ${singularize(methodCategory)}'s `${k}` changed:\n");
-      if (k == "comment") {
+    attributes.forEachChanged((String key, List oldNew) {
+      io.writeln("The [$method](#) ${singularize(methodCategory)}'s `${key}` changed:\n");
+      if (key == "comment") {
         io..writeln("Was:\n")
-            ..writeBlockquote((v as List<String>)[0])
+            ..writeBlockquote((oldNew as List<String>)[0])
             ..writeln("Now:\n")
-            ..writeBlockquote((v as List<String>)[1]);
+            ..writeBlockquote((oldNew as List<String>)[1]);
       } else {
-        io.writeln("Was: `${(v as List)[0]}`\n");
-        io.writeln("Now: `${(v as List)[1]}`");
+        io.writeln("Was: `${oldNew[0]}`\n");
+        io.writeln("Now: `${oldNew[1]}`");
       }
       io.writeln("\n---\n");
     });

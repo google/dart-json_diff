@@ -94,6 +94,32 @@ void main() {
     expect(innerNode.changed, hasLength(1));
     expect(innerNode.changed["x"], equals([1,2]));
   });
+
+  test('JsonDiffer diff() with a new value at the end of a list', () {
+    differ = new JsonDiffer('{"a": [1,2]}', '{"a": [1,2,4]}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, hasLength(1));
+    expect(node.node["a"].added, hasLength(1));
+    expect(node.node["a"].added["2"], equals(4));
+    expect(node.node["a"].removed, isEmpty);
+    expect(node.node["a"].changed, isEmpty);
+  });
+
+  test('JsonDiffer diff() with a new value in the middle of a list', () {
+    differ = new JsonDiffer('{"a": [1,2]}', '{"a": [1,4,2]}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, hasLength(1));
+    expect(node.node["a"].added, hasLength(1));
+    expect(node.node["a"].added["1"], equals(4));
+    expect(node.node["a"].removed, isEmpty);
+    expect(node.node["a"].changed, isEmpty);
+  });
 }
 
 String jsonFrom(Map<String,Object> obj) {
@@ -118,7 +144,7 @@ const Map<String,Object> necks2000Map = const {
       const { 'name': 'Altitudinous Al', 'position': 'Forward', 'Jersey': 55 },
     'Lonny the Lofty':
       const { 'name': 'Lonny the Lofty', 'position': 'Guard', 'Jersey': 89 }
-  }
+  },
 };
 
 const Map<String,Object> necks2010Map = const {
@@ -139,5 +165,5 @@ const Map<String,Object> necks2010Map = const {
       const { 'name': 'Frank', 'position': 'Forward', 'Jersey': 5 },
     'Lonny the Lofty':
       const { 'name': 'Lonny the Lofty', 'position': 'Guard', 'Jersey': 89 }
-  }
+  },
 };

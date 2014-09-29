@@ -8,13 +8,14 @@ class Shapeshift {
     parseArgs(arguments);
     String left = args.rest[0];
     String right = args.rest[1];
-
-    PackageReporter packageReporter = new PackageReporter(
-        "${args['base']}/$left/${args['subset']}",
-        "${args['base']}/$right/${args['subset']}",
-        out: args['out']);
-
-    packageReporter..calculateAllDiffs()..report();
+    String leftPath = "${args['base']}/$left";
+    String rightPath = "${args['base']}/$right";
+    if (args['subset'].isNotEmpty) {
+      leftPath += "/${args['subset']}";
+      rightPath += "/${args['subset']}";
+    }
+    new PackageReporter(leftPath, rightPath, out: args['out'])
+        ..calculateAllDiffs()..report();
   }
   
   void parseArgs(List<String> arguments) {
