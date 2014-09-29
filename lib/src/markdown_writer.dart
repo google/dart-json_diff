@@ -58,4 +58,16 @@ title: $packageName
 permalink: /$packageName/
 ---""");
   }
+
+  void writeWasNow(String theOld, String theNew, {bool blockquote: false}) {
+    if (blockquote) {
+      writeln("Was:\n");
+      writeBlockquote(theOld);
+      writeln("Now:\n");
+      writeBlockquote(theNew);
+    } else {
+      writeln("Was: `$theOld`\n");
+      writeln("Now: `$theNew`");
+    }
+  }
 }

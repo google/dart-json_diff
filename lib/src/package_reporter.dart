@@ -132,15 +132,7 @@ class FileReporter {
     if (diff.hasChanged) {
       diff.forEachChanged((String key, List oldNew) {
         io.writeln("${diff.metadata["name"]}'s `${key}` changed:\n");
-        if (key == "comment") {
-          io..writeln("Was:\n")
-              ..writeBlockquote((oldNew as List<String>)[0])
-              ..writeln("Now:\n")
-              ..writeBlockquote((oldNew as List<String>)[1]);
-        } else {
-          io.writeln("Was: `${oldNew[0]}`\n");
-          io.writeln("Now: `${oldNew[1]}`");
-        }
+        io.writeWasNow((oldNew as List<String>)[0], (oldNew as List<String>)[1], blockquote: key=="comment");
       });
       diff.changed.clear();
     }
@@ -188,8 +180,7 @@ class FileReporter {
       if (variable.hasChanged) {
         variable.forEachChanged((attribute, value) {
           io.writeln("The [$key](#) variable's `$attribute` changed:\n");
-          io.writeln("Was: `${value[0]}`\n");
-          io.writeln("Now: `${value[1]}`\n");
+          io.writeWasNow(value[0], value[1], blockquote: attribute=="comment");
           io.writeln("---\n");
         });
       }
@@ -206,9 +197,18 @@ class FileReporter {
 
   void reportList(String key, DiffNode d) {
     d[key].forEachAdded((String idx, String el) {
-      io.writeln("New $key at index $idx: ${el}");
+      io.writeln("New $key at index $idx: $el");
     });
     if (erase) { d[key].added.clear(); }
+
+    if (d[key].hasRemoved) {
+      io.writeln("Removed ${pluralize(key)}:\n");
+      d[key].forEachRemoved((String idx, String el) {
+        io.writeln("* at index $idx: [$el](#)");
+      });
+      io.writeln("\n---\n");
+    }
+    if (erase) { d[key].removed.clear(); }
   }
 
   String comment(String c) {
@@ -357,6 +357,11 @@ class FileReporter {
 String singularize(String s) {
   // Remove trailing character. Presumably an 's'.
   return s.substring(0, s.length-1);
+}
+
+String pluralize(String s) {
+  if (s.endsWith("s")) { return s+"es"; }
+  return s+"s";
 }
 
 class PackageSdk {

@@ -44,7 +44,7 @@ class DiffNode {
     added.forEach(ffn);
   }
   
-  void forEachRemoved(void ffn(String s, List<Object> o)) {
+  void forEachRemoved(void ffn(String s, Object o)) {
     removed.forEach(ffn);
   }
   
