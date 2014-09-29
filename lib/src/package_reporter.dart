@@ -252,12 +252,7 @@ class FileReporter {
       if (erase) { attribute.added.clear(); }
       
       attribute.node.forEach((attributeAttributeName, attributeAttribute) {
-        attributeAttribute.forEachChanged((key, oldNew) {
-          String category = singularize(methodCategory);
-          io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)} has a changed $key: `${oldNew[0]}` to `${oldNew[1]}`");
-          io.writeln("\n---\n");
-        });
-        if (erase) { attributeAttribute.changed.clear(); }
+        reportEachMethodAttributeAttribute(methodCategory, method, attributeName, attributeAttributeName, attributeAttribute);
       });
     });
 
@@ -277,6 +272,28 @@ class FileReporter {
     if (erase) { attributes.changed.clear(); }
   }
   
+  void reportEachMethodAttributeAttribute(String methodCategory,
+                                          String method,
+                                          String attributeName,
+                                          String attributeAttributeName,
+                                          DiffNode attributeAttribute) {
+    attributeAttribute.forEachChanged((key, oldNew) {
+      String category = singularize(methodCategory);
+      io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)} has a changed $key: `${oldNew[0]}` to `${oldNew[1]}`");
+      io.writeln("\n---\n");
+    });
+    if (erase) { attributeAttribute.changed.clear(); }
+
+    if (attributeAttribute.containsKey("type")) {
+      String category = singularize(methodCategory);
+      String key = "type";
+      List<String> oldNew = attributeAttribute[key]["0"].changed["outer"];
+      io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)} has a changed $key: `${oldNew[0]}` to `${oldNew[1]}`");
+      io.writeln("\n---\n");
+      attributeAttribute.node.remove("type");
+    }
+  }
+
   // TODO: just steal this from dartdoc-viewer
   String methodSignature(Map<String,Object> method, { bool includeComment: true }) {
     String name = method['name'];
