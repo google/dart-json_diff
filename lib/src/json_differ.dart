@@ -2,6 +2,7 @@ part of shapeshift;
 
 class JsonDiffer {
   Map<String,Object> leftJson, rightJson;
+  final List<String> atomics = new List<String>();
   
   JsonDiffer(leftString, rightString) {
     Object _leftJson = new JsonDecoder().convert(leftString);
@@ -50,8 +51,12 @@ class JsonDiffer {
       }
       
       Object rightValue = right[key];
-      if (leftValue is List && rightValue is List) {
-        node[key] = diffLists(leftValue, rightValue);
+      if (atomics.contains(key) && leftValue.toString() != rightValue.toString()) {
+        // Treat leftValue and rightValue as atomic objects, even if they are
+        // deep maps or some such thing.
+        node.changed[key] = [leftValue, rightValue];
+      } else if (leftValue is List && rightValue is List) {
+        node[key] = diffLists(leftValue, rightValue, key);
       } else if (leftValue is Map && rightValue is Map) {
         node[key] = diffObjects(leftValue, rightValue);
       } else if (leftValue != rightValue) {
@@ -70,7 +75,7 @@ class JsonDiffer {
     return node;
   }
 
-  DiffNode diffLists(List<Object> left, List<Object> right) {
+  DiffNode diffLists(List<Object> left, List<Object> right, String parentKey) {
     DiffNode node = new DiffNode();
     int leftHand = 0;
     int leftFoot = 0;
@@ -114,10 +119,14 @@ class JsonDiffer {
           // TODO: This notation is wrong for a case such as:
           //     [1,2,3,4,5,6] => [1,4,5,7]
           //     changed.first = [[5, 6], [3,7]
-          if (left[leftFoot] is Map && right[rightFoot] is Map) {
+          if (atomics.contains(parentKey+"[]") && left[leftFoot].toString() != right[rightFoot].toString()) {
+            // Treat leftValue and rightValue as atomic objects, even if they are
+            // deep maps or some such thing.
+            node.changed[leftFoot.toString()] = [left[leftFoot], right[rightFoot]];
+          } else if (left[leftFoot] is Map && right[rightFoot] is Map) {
             node[leftFoot.toString()] = diffObjects(left[leftFoot], right[rightFoot]);
           } else if (left[leftFoot] is List && right[rightFoot] is List) {
-            node[leftFoot.toString()] = diffLists(left[leftFoot], right[rightFoot]);
+            node[leftFoot.toString()] = diffLists(left[leftFoot], right[rightFoot], null);
           } else {
             node.changed[leftFoot.toString()] = [left[leftFoot], right[rightFoot]];
           }
