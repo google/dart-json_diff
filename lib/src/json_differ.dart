@@ -51,15 +51,6 @@ class JsonDiffer {
       
       Object rightValue = right[key];
       if (leftValue is List && rightValue is List) {
-        /*Map<String,Object> leftListAsMap = new Map<String,Object>();
-        Map<String,Object> rightListAsMap = new Map<String,Object>();
-        for (int i = 0; i < leftValue.length; i++) {
-          leftListAsMap[i.toString()] = leftValue[i];
-        }
-        for (int i = 0; i < rightValue.length; i++) {
-          rightListAsMap[i.toString()] = rightValue[i];
-        }
-        node[key] = diffObjects(leftListAsMap, rightListAsMap);*/
         node[key] = diffLists(leftValue, rightValue);
       } else if (leftValue is Map && rightValue is Map) {
         node[key] = diffObjects(leftValue, rightValue);

@@ -10,6 +10,10 @@ class PackageReporter {
   void calculateDiff(String fileName) {
     File leftFile = new File("$leftPath/$fileName");
     File rightFile = new File("$rightPath/$fileName");
+    if (!leftFile.existsSync()) {
+      print("$leftFile doesn't exist, which should be caught in the package json.");
+      return;
+    }
     JsonDiffer differ = new JsonDiffer(leftFile.readAsStringSync(), rightFile.readAsStringSync());
     differ.ensureIdentical(["name", "qualifiedName"]);
     diff[fileName] = differ.diff()
@@ -28,8 +32,12 @@ class PackageReporter {
     int i = 0;
     rightLs.forEach((String file) {
       i += 1;
-      if (i < 100) {
+      if (i < 1200) {
         file = file.replaceFirst(rightPath, "");
+        if (file == "/docgen/index.json" || file == "/docgen/library_list.json" || !file.endsWith(".json")) {
+          print("Skipping $file");
+          return;
+        }
         print("$i: diffing $file");
         calculateDiff(file);
       }
@@ -88,6 +96,7 @@ class FileReporter {
   final DiffNode diff;
   final MarkdownWriter io;
   final bool erase = true;
+  bool hideInherited = true;
 
   FileReporter(this.fileName, this.diff, { this.io });
 
@@ -129,10 +138,15 @@ class FileReporter {
   }
 
   void reportClass() {
+    if (diff.containsKey("annotations")) {
+      reportList("annotations", diff);
+    }
+
     if (diff.hasChanged) {
       diff.forEachChanged((String key, List oldNew) {
         io.writeln("${diff.metadata["name"]}'s `${key}` changed:\n");
         io.writeWasNow((oldNew as List<String>)[0], (oldNew as List<String>)[1], blockquote: key=="comment");
+        io.writeln("\n---\n");
       });
       diff.changed.clear();
     }
@@ -146,26 +160,41 @@ class FileReporter {
       reportEachMethodThing(methodCategory, d);
     });
 
-    diff.forEachOf("inheritedMethods", (String methodCategory, DiffNode d) {
-      reportEachMethodThing(methodCategory, d, parenthetical: "inherited");
-    });
+    if (hideInherited) {
+      diff.forEachOf("inheritedMethods", (String methodCategory, DiffNode d) {
+        io.writeln("_Hiding inherited $methodCategory changes._\n\n---\n");
+      });
+      if (diff.containsKey("inheritedMethods")) {
+        diff.node.remove("inheritedMethods");
+      }
+    } else {
+      diff.forEachOf("inheritedMethods", (String methodCategory, DiffNode d) {
+        reportEachMethodThing(methodCategory, d, parenthetical: "inherited");
+      });
+    }
 
     reportVariables("variables");
-    reportVariables("inheritedVariables");
+    if (hideInherited) {
+      if (diff.containsKey("inheritedVariables")) {
+        diff.node.remove("inheritedVariables");
+      }
+    } else {
+      reportVariables("inheritedVariables");
+    }
   }
   
-  void reportVariables(String key) {
-    if (!diff.containsKey(key)) { return; }
-    DiffNode variables = diff[key];
+  void reportVariables(String variableList) {
+    if (!diff.containsKey(variableList)) { return; }
+    DiffNode variables = diff[variableList];
 
     if (variables.hasAdded) {
-      io.writeln("New variables:\n");
+      io.writeln("New $variableList:\n");
       io.writeCodeblockHr(variables.added.values.map(variableSignature).join("\n"));
     }
     if (erase) { variables.added.clear(); }
 
     if (variables.hasRemoved) {
-      io.writeln("Removed variables:\n");
+      io.writeln("Removed $variableList:\n");
       io.writeCodeblockHr(variables.removed.values.map(variableSignature).join("\n"));
     }
     if (erase) { variables.removed.clear(); }
@@ -179,16 +208,16 @@ class FileReporter {
     variables.forEach((key, variable) {
       if (variable.hasChanged) {
         variable.forEachChanged((attribute, value) {
-          io.writeln("The [$key](#) variable's `$attribute` changed:\n");
+          io.writeln("The [$key](#) ${singularize(variableList)}'s `$attribute` changed:\n");
           io.writeWasNow(value[0], value[1], blockquote: attribute=="comment");
-          io.writeln("---\n");
+          io.writeln("\n---\n");
         });
       }
       if (erase) { variable.changed.clear(); }
 
       if (variable.node.isNotEmpty) {
         variable.node.forEach((s, dn) {
-          io.writeBad("TODO: The [$key](#) variable's `$s` has changed:\n", dn.toString(pretty: false));
+          io.writeBad("TODO: The [$key](#) ${singularize(variableList)}'s `$s` has changed:\n", dn.toString(pretty: false));
         });
       }
       if (erase) { variable.node.clear(); }
@@ -196,15 +225,26 @@ class FileReporter {
   }
 
   void reportList(String key, DiffNode d) {
-    d[key].forEachAdded((String idx, String el) {
-      io.writeln("New $key at index $idx: $el");
+    d[key].forEachAdded((String idx, Object el) {
+      //{name: dart-core.Deprecated, parameters: ["Dart sdk v. 1.8"]}
+      if (el is Map) {
+        io.writeln("New $key at index $idx: `$el`\n\n---");
+      }
+      if (el is String) {
+        io.writeln("New $key at index $idx: $el\n\n---");
+      }
     });
     if (erase) { d[key].added.clear(); }
 
     if (d[key].hasRemoved) {
       io.writeln("Removed ${pluralize(key)}:\n");
-      d[key].forEachRemoved((String idx, String el) {
-        io.writeln("* at index $idx: [$el](#)");
+      d[key].forEachRemoved((String idx, Object el) {
+        if (el is Map) {
+          io.writeln("* at index $idx: `$el`");
+        }
+        if (el is String) {
+          io.writeln("* at index $idx: $el");
+        }
       });
       io.writeln("\n---\n");
     }
@@ -270,15 +310,7 @@ class FileReporter {
 
     attributes.forEachChanged((String key, List oldNew) {
       io.writeln("The [$method](#) $category's `${key}` changed:\n");
-      if (key == "comment") {
-        io..writeln("Was:\n")
-            ..writeBlockquote((oldNew as List<String>)[0])
-            ..writeln("Now:\n")
-            ..writeBlockquote((oldNew as List<String>)[1]);
-      } else {
-        io.writeln("Was: `${oldNew[0]}`\n");
-        io.writeln("Now: `${oldNew[1]}`");
-      }
+      io.writeWasNow((oldNew as List<String>)[0], (oldNew as List<String>)[1], blockquote: key=="comment");
       io.writeln("\n---\n");
     });
     if (erase) { attributes.changed.clear(); }
@@ -322,6 +354,7 @@ class FileReporter {
   }
 
   String simpleType(List<Map> t) {
+    if (t == null) { return null; }
     // TODO more than the first
     String type = t[0]['outer'];
     if (type.startsWith("dart-core.")) {
@@ -334,7 +367,9 @@ class FileReporter {
   String parameterSignature(Map<String,Object> parameter) {
     String type = simpleType(parameter['type']);
     String s = "$type ${parameter['name']}";
-    if (parameter["optional"] && parameter["named"]) {
+    bool optional = parameter.containsKey("optional") && parameter["optional"];
+    bool named = parameter.containsKey("named") && parameter["named"];
+    if (optional && named) {
       s = "{ $s: ${parameter['default']} }";
     }
     return s;
@@ -355,11 +390,13 @@ class FileReporter {
 }
 
 String singularize(String s) {
+  if (s=="return") { return s; }
   // Remove trailing character. Presumably an 's'.
   return s.substring(0, s.length-1);
 }
 
 String pluralize(String s) {
+  if (s=="annotations") { return s; }
   if (s.endsWith("s")) { return s+"es"; }
   return s+"s";
 }
