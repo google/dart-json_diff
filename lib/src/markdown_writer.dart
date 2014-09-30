@@ -59,18 +59,29 @@ permalink: /$packageName/
 ---""");
   }
 
-  void writeWasNow(Object theOld, Object theNew, {bool blockquote: false}) {
+  void writeWasNow(Object theOld, Object theNew, {bool blockquote: false, bool link: false}) {
     String theOldStr = theOld.toString();
     String theNewStr = theNew.toString();
     if (blockquote) {
-      writeln("Was:\n");
-      writeBlockquote(theOldStr);
-      writeln("Now:\n");
-      writeBlockquote(theNewStr);
+
+      if (theOldStr.isEmpty) {
+        writeln("Was: _empty_");
+      } else {
+        writeln("Was:\n");
+        writeBlockquote(theOldStr);
+      }
+      if (theNewStr.isEmpty) {
+        writeln("Now: _empty_");
+      } else {
+        writeln("Now:\n");
+        writeBlockquote(theNewStr);
+      }
     } else {
       if (theOldStr.isEmpty) { theOldStr = "_empty_"; }
+      else if (link)         { theOldStr = "[$theOldStr](#)"; }
       else                   { theOldStr = "`$theOldStr`"; }
       if (theNewStr.isEmpty) { theNewStr = "_empty_"; }
+      else if (link)         { theNewStr = "[$theNewStr](#)"; }
       else                   { theNewStr = "`$theNewStr`"; }
       writeln("Was: $theOldStr\n");
       writeln("Now: $theNewStr");

@@ -137,22 +137,38 @@ class FileReporter {
     diff.forEachOf("functions", reportEachMethodThing);
   }
 
+  String annotationFormatter(Map a) {
+    String result = (a["name"] as String).split(".").last;
+    if (a.containsKey("parameters")) {
+      result += "(${a["parameters"].join(", ")})";
+    }
+    return "`@$result`";
+  }
+
+  String classFormatter(String c) {
+    return "[${c.replaceAll("_", "\\_")}](#)";
+  }
+
   void reportClass() {
     if (diff.containsKey("annotations")) {
-      reportList("annotations", diff);
+      reportList("annotations", diff, formatter: annotationFormatter);
     }
 
     if (diff.hasChanged) {
       diff.forEachChanged((String key, List oldNew) {
         io.writeln("${diff.metadata["name"]}'s `${key}` changed:\n");
-        io.writeWasNow((oldNew as List<String>)[0], (oldNew as List<String>)[1], blockquote: key=="comment");
+        io.writeWasNow(
+            (oldNew as List<String>)[0],
+            (oldNew as List<String>)[1],
+            blockquote: key=="comment",
+            link: ["superclass"].contains(key));
         io.writeln("\n---\n");
       });
       diff.changed.clear();
     }
 
     if (diff.containsKey("subclass")) {
-      reportList("subclass", diff);
+      reportList("subclass", diff, formatter: classFormatter);
     }
 
     // iterate over the method categories
@@ -224,27 +240,23 @@ class FileReporter {
     });
   }
 
-  void reportList(String key, DiffNode d) {
-    d[key].forEachAdded((String idx, Object el) {
-      //{name: dart-core.Deprecated, parameters: ["Dart sdk v. 1.8"]}
-      if (el is Map) {
-        io.writeln("New $key at index $idx: `$el`\n\n---");
-      }
-      if (el is String) {
-        io.writeln("New $key at index $idx: $el\n\n---");
-      }
-    });
+  void reportList(String key, DiffNode d, { Function formatter }) {
+    if (d[key].hasAdded) {
+      io.writeln("Added ${pluralize(key)}:\n");
+      d[key].forEachAdded((String idx, Object el) {
+        //{name: dart-core.Deprecated, parameters: ["Dart sdk v. 1.8"]}
+        if (formatter != null) { el = formatter(el); }
+        io.writeln("* at index $idx: $el");
+      });
+      io.writeln("\n---\n");
+    }
     erase(d[key].added);
 
     if (d[key].hasRemoved) {
       io.writeln("Removed ${pluralize(key)}:\n");
       d[key].forEachRemoved((String idx, Object el) {
-        if (el is Map) {
-          io.writeln("* at index $idx: `$el`");
-        }
-        if (el is String) {
-          io.writeln("* at index $idx: $el");
-        }
+        if (formatter != null) { el = formatter(el); }
+        io.writeln("* at index $idx: $el");
       });
       io.writeln("\n---\n");
     }
@@ -300,11 +312,13 @@ class FileReporter {
   
   void reportEachMethodAttribute(String category, String method, DiffNode attributes) {
     attributes.forEach((attributeName, attribute) {
-      attribute.forEachAdded((k, v) {
-        //print("The '$method' in '$methodCategory' has a new $name: '$k': ${pretty(v)}");
-        io.writeln("The [$method](#) ${category} has a new ${singularize(attributeName)}: `${parameterSignature(v as Map)}`");
+      if (attribute.hasAdded) {
+        io.writeln("The [$method](#) ${category} has new $attributeName:\n");
+        attribute.forEachAdded((k, v) {
+          io.writeln("* `${parameterSignature(v as Map)}`");
+        });
         io.writeln("\n---\n");
-      });
+      }
       erase(attribute.added);
       
       attribute.node.forEach((attributeAttributeName, attributeAttribute) {
