@@ -32,7 +32,7 @@ class PackageReporter {
     int i = 0;
     rightLs.forEach((String file) {
       i += 1;
-      if (i < 1200) {
+      if (i < 1000) {
         file = file.replaceFirst(rightPath, "");
         if (file == "/docgen/index.json" || file == "/docgen/library_list.json" || !file.endsWith(".json")) {
           print("Skipping $file");
@@ -95,7 +95,7 @@ class FileReporter {
   final String fileName;
   final DiffNode diff;
   final MarkdownWriter io;
-  final bool erase = true;
+  final bool shouldErase = true;
   bool hideInherited = true;
 
   FileReporter(this.fileName, this.diff, { this.io });
@@ -126,7 +126,7 @@ class FileReporter {
   void reportPackage() {
     if (diff.changed.containsKey("packageIntro")) {
       io.writeBad("TODO: The <strong>packageIntro</strong> changed, which is probably huge. Not including here yet.", "");
-      diff.changed.remove("packageIntro");
+      if (shouldErase) { diff.changed.remove("packageIntro"); }
     }
 
     // iterate over the class categories
@@ -165,7 +165,7 @@ class FileReporter {
         io.writeln("_Hiding inherited $methodCategory changes._\n\n---\n");
       });
       if (diff.containsKey("inheritedMethods")) {
-        diff.node.remove("inheritedMethods");
+        if (shouldErase) { diff.node.remove("inheritedMethods"); }
       }
     } else {
       diff.forEachOf("inheritedMethods", (String methodCategory, DiffNode d) {
@@ -176,7 +176,7 @@ class FileReporter {
     reportVariables("variables");
     if (hideInherited) {
       if (diff.containsKey("inheritedVariables")) {
-        diff.node.remove("inheritedVariables");
+        if (shouldErase) { diff.node.remove("inheritedVariables"); }
       }
     } else {
       reportVariables("inheritedVariables");
@@ -191,13 +191,13 @@ class FileReporter {
       io.writeln("New $variableList:\n");
       io.writeCodeblockHr(variables.added.values.map(variableSignature).join("\n"));
     }
-    if (erase) { variables.added.clear(); }
+    erase(variables.added);
 
     if (variables.hasRemoved) {
       io.writeln("Removed $variableList:\n");
       io.writeCodeblockHr(variables.removed.values.map(variableSignature).join("\n"));
     }
-    if (erase) { variables.removed.clear(); }
+    erase(variables.removed);
 
     if (variables.hasChanged) {
       variables.forEachChanged((k,v) {
@@ -213,14 +213,14 @@ class FileReporter {
           io.writeln("\n---\n");
         });
       }
-      if (erase) { variable.changed.clear(); }
+      erase(variable.changed);
 
       if (variable.node.isNotEmpty) {
         variable.node.forEach((s, dn) {
           io.writeBad("TODO: The [$key](#) ${singularize(variableList)}'s `$s` has changed:\n", dn.toString(pretty: false));
         });
       }
-      if (erase) { variable.node.clear(); }
+      erase(variable.node);
     });
   }
 
@@ -234,7 +234,7 @@ class FileReporter {
         io.writeln("New $key at index $idx: $el\n\n---");
       }
     });
-    if (erase) { d[key].added.clear(); }
+    erase(d[key].added);
 
     if (d[key].hasRemoved) {
       io.writeln("Removed ${pluralize(key)}:\n");
@@ -248,7 +248,7 @@ class FileReporter {
       });
       io.writeln("\n---\n");
     }
-    if (erase) { d[key].removed.clear(); }
+    erase(d[key].removed);
   }
 
   String comment(String c) {
@@ -256,17 +256,21 @@ class FileReporter {
     return c.split("\n").map((String x) => "/// $x\n").join("");
   }
 
+  void erase(Map m) {
+    if (shouldErase) { m.clear(); }
+  }
+
   void reportEachClassThing(String classCategory, DiffNode d) {
     d.forEachAdded((idx, klass) {
       io.writeln("New $classCategory [${klass['name']}](#)");
       io.writeln("\n---\n");
     });
-    if (erase) { d.added.clear(); }
+    erase(d.added);
 
     d.forEach((String s, DiffNode classThing) {
       io.writeBad("TODO: changed $classCategory $s:", classThing.toString());
     });
-    d.node.clear();
+    erase(d.node);
   }
   
   void reportEachMethodThing(String methodCategory, DiffNode d, { String parenthetical:""}) {
@@ -277,7 +281,7 @@ class FileReporter {
       io.writeln("New $category$parenthetical [$k](#):\n");
       io.writeCodeblockHr(methodSignature(v as Map));
     });
-    if (erase) { d.added.clear(); }
+    erase(d.added);
     
     d.forEachRemoved((k, v) {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
@@ -285,7 +289,7 @@ class FileReporter {
       io.writeln("Removed $category$parenthetical [$k](#):\n");
       io.writeCodeblockHr(methodSignature(v as Map, includeComment: false));
     });
-    if (erase) { d.removed.clear(); }
+    erase(d.removed);
           
     // iterate over the methods
     d.forEach((method, attributes) {
@@ -301,7 +305,7 @@ class FileReporter {
         io.writeln("The [$method](#) ${category} has a new ${singularize(attributeName)}: `${parameterSignature(v as Map)}`");
         io.writeln("\n---\n");
       });
-      if (erase) { attribute.added.clear(); }
+      erase(attribute.added);
       
       attribute.node.forEach((attributeAttributeName, attributeAttribute) {
         reportEachMethodAttributeAttribute(category, method, attributeName, attributeAttributeName, attributeAttribute);
@@ -313,7 +317,7 @@ class FileReporter {
       io.writeWasNow((oldNew as List<String>)[0], (oldNew as List<String>)[1], blockquote: key=="comment");
       io.writeln("\n---\n");
     });
-    if (erase) { attributes.changed.clear(); }
+    erase(attributes.changed);
   }
   
   void reportEachMethodAttributeAttribute(String category,
@@ -325,14 +329,14 @@ class FileReporter {
       io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)} has a changed $key from `${oldNew[0]}` to `${oldNew[1]}`");
       io.writeln("\n---\n");
     });
-    if (erase) { attributeAttribute.changed.clear(); }
+    erase(attributeAttribute.changed);
 
     if (attributeAttribute.containsKey("type")) {
       String key = "type";
       List<String> oldNew = attributeAttribute[key]["0"].changed["outer"];
       io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)}'s $key has changed from `${oldNew[0]}` to `${oldNew[1]}`");
       io.writeln("\n---\n");
-      attributeAttribute.node.remove("type");
+      if (shouldErase) { attributeAttribute.node.remove("type"); }
     }
   }
 
