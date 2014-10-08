@@ -316,7 +316,7 @@ class FileReporter {
       //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
       if (k == '') { k = diff.metadata['name']; }
       io.writeln("Removed $category$parenthetical [$k](#):\n");
-      io.writeCodeblockHr(methodSignature(v as Map, includeComment: false));
+      io.writeCodeblockHr(methodSignature(v as Map, includeComment: false, includeAnnotations: false));
     });
     erase(d.removed);
           
@@ -350,6 +350,7 @@ class FileReporter {
     });
 
     attributes.forEachChanged((String key, List oldNew) {
+      if (key == 'commentFrom') { return; } // We don't care about commentFrom.
       io.writeln("The [$method](#) $category's `${key}` changed:\n");
       if (key == "return") {
         io.writeWasNow(simpleType(oldNew[0]), simpleType(oldNew[1]));
@@ -386,7 +387,8 @@ class FileReporter {
   }
 
   // TODO: just steal this from dartdoc-viewer
-  String methodSignature(Map<String,Object> method, { bool includeComment: true }) {
+  String methodSignature(Map<String,Object> method,
+                         { bool includeComment: true, bool includeAnnotations: true }) {
     String name = method['name'];
     String type = simpleType(method["return"]);
     if (name == '') { name = diff.metadata['name']; }
@@ -394,9 +396,11 @@ class FileReporter {
     if (includeComment) {
       s = comment(method['comment']) + s;
     }
-    (method['annotations'] as List).forEach((Map annotation) {
-      s = annotationFormatter(annotation, backticks: false) + "\n" + s;
-    });
+    if (includeAnnotations) {
+      (method['annotations'] as List).forEach((Map annotation) {
+        s = annotationFormatter(annotation, backticks: false) + "\n" + s;
+      });
+    }
     List<String> p = new List<String>();
     (method['parameters'] as Map).forEach((k, v) {
       p.add(parameterSignature(v));
