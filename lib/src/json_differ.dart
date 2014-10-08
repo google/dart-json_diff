@@ -3,6 +3,7 @@ part of shapeshift;
 class JsonDiffer {
   Map<String,Object> leftJson, rightJson;
   final List<String> atomics = new List<String>();
+  final List<String> metadataToKeep = new List<String>();
   
   JsonDiffer(leftString, rightString) {
     Object _leftJson = new JsonDecoder().convert(leftString);
@@ -30,19 +31,20 @@ class JsonDiffer {
       }
     }
   }
-  
+
   DiffNode diff() {
     Map<String,Object> added = new Map<String,Object>();
     Map<String,Object> removed = new Map<String,Object>();
     Map<String,Object> changed = new Map<String,Object>();
-    
+
     DiffNode d = diffObjects(leftJson, rightJson);
     d.prune();
     return d;
   }
-  
+
   DiffNode diffObjects(Map<String,Object> left, Map<String,Object> right) {
     DiffNode node = new DiffNode();
+    keepMetadata(node, left, right);
     left.forEach((String key, Object leftValue) {
       if (!right.containsKey(key)) {
         // [key] is missing from [right]
@@ -146,6 +148,14 @@ class JsonDiffer {
     }
 
     return node;
+  }
+
+  void keepMetadata(DiffNode node, Map left, Map right) {
+    metadataToKeep.forEach((String key) {
+      if (left.containsKey(key) && right.containsKey(key) && left[key] == right[key]) {
+        node.metadata[key] = left[key];
+      }
+    });
   }
 }
 

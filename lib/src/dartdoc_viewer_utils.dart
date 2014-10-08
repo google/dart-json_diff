@@ -5,8 +5,8 @@ String fullDartlangLocation(String qualifiedName) =>
     'https://api.dartlang.org/apidocs/channels/dev'
     '/dartdoc-viewer/' + Uri.encodeFull(qualifiedName);
 
-String mdLinkToDartlang(String qualifiedName) {
-  return '[${decoratedName(qualifiedName)}](${fullDartlangLocation(qualifiedName)})';
+String mdLinkToDartlang(String qualifiedName, [String text]) {
+  return '[${text !=null ? text : decoratedName(qualifiedName)}](${fullDartlangLocation(qualifiedName)})';
 }
 
 String decoratedName(String qualifiedName) {

@@ -73,7 +73,6 @@ permalink: /$packageName/
         writeBlockquote(highlightDeleted(theOldStr, theNewStr));
         //writeBlockquote(theOldStr);
       }
-      print("\n\n");
       if (theNewStr.isEmpty) {
         writeln("Now: _empty_");
       } else {

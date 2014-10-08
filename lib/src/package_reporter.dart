@@ -19,6 +19,8 @@ class PackageReporter {
         ..add("type")
         ..add("return")
         ..add("annotations[]");
+    differ.metadataToKeep
+        ..add('qualifiedName');
     differ.ensureIdentical(["name", "qualifiedName"]);
     diff[fileName] = differ.diff()
         ..metadata['qualifiedName'] = differ.leftJson['qualifiedName']
@@ -112,7 +114,7 @@ class FileReporter {
       io.bufferH1(diff.metadata['qualifiedName']);
       reportPackage();
     } else {
-      io.bufferH2("class ${diff.metadata["name"]}");
+      io.bufferH2("class ${mdLinkToDartlang(diff.metadata['qualifiedName'], diff.metadata["name"])}");
       reportClass();
     }
 
@@ -227,11 +229,12 @@ class FileReporter {
     }
 
     variables.forEach((key, variable) {
+      var link = mdLinkToDartlang(variable.metadata['qualifiedName'], key);
       if (variable.hasChanged) {
         variable.forEachChanged((attribute, value) {
-          io.writeln("The [$key](#) ${singularize(variableList)}'s `$attribute` changed:\n");
+          io.writeln("The $link ${singularize(variableList)}'s `$attribute` changed:\n");
           if (attribute == "type") {
-            io.writeWasNow(simpleType(value[0]), simpleType(value[1]));
+            io.writeWasNow(simpleType(value[0]), simpleType(value[1]), link: true);
           } else {
             io.writeWasNow(value[0], value[1], blockquote: attribute=="comment");
           }
@@ -243,7 +246,7 @@ class FileReporter {
       if (variable.node.isNotEmpty) {
         variable.node.forEach((attribute, dn) {
           if (attribute == "annotations") {
-            io.writeln("The [$key](#) ${singularize(variableList)}'s annotations have changed:\n");
+            io.writeln("The $link ${singularize(variableList)}'s annotations have changed:\n");
             dn.forEachChanged((String idx, List<Object> annotation) {
               io.writeWasNow(annotationFormatter(annotation[0]), annotationFormatter(annotation[1]));
             });
@@ -290,7 +293,7 @@ class FileReporter {
 
   void reportEachClassThing(String classCategory, DiffNode d) {
     d.forEachAdded((idx, klass) {
-      io.writeln("New $classCategory ${mdLinkToDartlang(klass['qualifiedName'])}");
+      io.writeln("New $classCategory ${mdLinkToDartlang(klass['qualifiedName'], klass['name'])}");
       io.writeln("\n---\n");
     });
     erase(d.added);
@@ -304,18 +307,16 @@ class FileReporter {
   void reportEachMethodThing(String methodCategory, DiffNode d, { String parenthetical:""}) {
     String category = singularize(methodCategory);
     if (parenthetical.isNotEmpty) { parenthetical = " _($parenthetical)_"; }
-    d.forEachAdded((k, v) {
-      //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
-      io.writeln("New $category$parenthetical [$k](#):\n");
-      io.writeCodeblockHr(methodSignature(v as Map));
+    d.forEachAdded((methodName, method) {
+      io.writeln("New $category$parenthetical ${mdLinkToDartlang(method['qualifiedName'], methodName)}:\n");
+      io.writeCodeblockHr(methodSignature(method as Map));
     });
     erase(d.added);
     
-    d.forEachRemoved((k, v) {
-      //print("New ${singularize(methodCategory)} '$k': ${pretty(v)}");
-      if (k == '') { k = diff.metadata['name']; }
-      io.writeln("Removed $category$parenthetical [$k](#):\n");
-      io.writeCodeblockHr(methodSignature(v as Map, includeComment: false, includeAnnotations: false));
+    d.forEachRemoved((methodName, method) {
+      if (methodName == '') { methodName = diff.metadata['name']; }
+      io.writeln("Removed $category$parenthetical $methodName:\n");
+      io.writeCodeblockHr(methodSignature(method as Map, includeComment: false, includeAnnotations: false));
     });
     erase(d.removed);
           
@@ -325,11 +326,35 @@ class FileReporter {
       reportEachMethodAttribute(category, method, attributes);
     });
   }
-  
+
   void reportEachMethodAttribute(String category, String method, DiffNode attributes) {
+    var link = mdLinkToDartlang(attributes.metadata['qualifiedName'], method);
+    bool shouldHr = false;
     attributes.forEach((attributeName, attribute) {
+      if (attribute.hasRemoved) {
+        io.writeln("The $link ${category} has removed $attributeName:\n");
+        shouldHr = true;
+        attribute.forEachRemoved((k, v) {
+          if (attributeName == "annotations") {
+            io.writeln("* ${annotationFormatter(v)}");
+          } else if (attributeName == "parameters") {
+            io.writeln("* `${parameterSignature(v as Map)}`");
+          } else {
+            io.writeln("* `$v`");
+          }
+        });
+        io.writeln("");
+      }
+      erase(attribute.removed);
+
       if (attribute.hasAdded) {
-        io.writeln("The [$method](#) ${category} has new $attributeName:\n");
+        if (shouldHr) {
+          // TODO: get this font-weight up.
+          io.writeln("and new $attributeName:\n");
+        } else {
+          io.writeln("The $link ${category} has new $attributeName:\n");
+        }
+        shouldHr = true;
         attribute.forEachAdded((k, v) {
           if (attributeName == "annotations") {
             io.writeln("* ${annotationFormatter(v)}");
@@ -339,18 +364,20 @@ class FileReporter {
             io.writeln("* `$v`");
           }
         });
-        io.writeln("\n---\n");
       }
       erase(attribute.added);
+      if (shouldHr) { io.writeln("\n---\n"); }
       
       attribute.node.forEach((attributeAttributeName, attributeAttribute) {
-        reportEachMethodAttributeAttribute(category, method, attributeName, attributeAttributeName, attributeAttribute);
+        reportEachMethodAttributeAttribute(category, method,
+            attributes.metadata['qualifiedName'], attributeName,
+            attributeAttributeName, attributeAttribute);
       });
     });
 
     attributes.forEachChanged((String key, List oldNew) {
       if (key == 'commentFrom') { return; } // We don't care about commentFrom.
-      io.writeln("The [$method](#) $category's `${key}` changed:\n");
+      io.writeln("The $link $category's `${key}` changed:\n");
       if (key == "return") {
         io.writeWasNow(simpleType(oldNew[0]), simpleType(oldNew[1]));
       } else {
@@ -363,14 +390,18 @@ class FileReporter {
   
   void reportEachMethodAttributeAttribute(String category,
                                           String method,
+                                          String methodQname,
                                           String attributeName,
                                           String attributeAttributeName,
                                           DiffNode attributeAttribute) {
     attributeAttribute.forEachChanged((key, oldNew) {
+      var methodLink = mdLinkToDartlang(methodQname, method);
+      var attrLink = mdLinkToDartlang('$methodQname,$attributeAttributeName', attributeAttributeName);
+      var firstPart = "The $methodLink ${category}'s $attrLink ${singularize(attributeName)}'s";
       if (key == "type") {
-        io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)}'s $key changed from `${simpleType(oldNew[0])}` to `${simpleType(oldNew[1])}`");
+        io.writeln("$firstPart $key changed from `${simpleType(oldNew[0])}` to `${simpleType(oldNew[1])}`");
       } else {
-        io.writeln("The [$method](#) ${category}'s [${attributeAttributeName}](#) ${singularize(attributeName)}'s changed from `$key: ${oldNew[0]}` to `$key: ${oldNew[1]}`");
+        io.writeln("$firstPart changed from `$key: ${oldNew[0]}` to `$key: ${oldNew[1]}`");
       }
       io.writeln("\n---\n");
     });
