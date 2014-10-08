@@ -83,10 +83,10 @@ permalink: /$packageName/
       }
     } else {
       if (theOldStr.isEmpty) { theOldStr = "_empty_"; }
-      else if (link)         { theOldStr = "[$theOldStr](#)"; }
+      else if (link)         { theOldStr = decoratedName(theOldStr); }
       else                   { theOldStr = "`$theOldStr`"; }
       if (theNewStr.isEmpty) { theNewStr = "_empty_"; }
-      else if (link)         { theNewStr = "[$theNewStr](#)"; }
+      else if (link)         { theNewStr = mdLinkToDartlang(theNewStr); }
       else                   { theNewStr = "`$theNewStr`"; }
       writeln("Was: $theOldStr\n");
       writeln("Now: $theNewStr");

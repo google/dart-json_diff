@@ -141,7 +141,7 @@ class FileReporter {
     diff.forEachOf("functions", reportEachMethodThing);
   }
 
-  String annotationFormatter(Map a, {bool backticks: true}) {
+  String annotationFormatter(Map a, {bool backticks: true, bool link: false}) {
     String result = "@" + (a["name"] as String).split(".").last;
     if (a.containsKey("parameters")) {
       result += "(${a["parameters"].join(", ")})";
@@ -150,8 +150,8 @@ class FileReporter {
     else { return result; }
   }
 
-  String classFormatter(String c) {
-    return "[${c.replaceAll("_", "\\_")}](#)";
+  String classFormatter(String c, {bool link: true}) {
+    return link ? mdLinkToDartlang(c) : decoratedName(c);
   }
 
   void reportClass() {
@@ -261,8 +261,7 @@ class FileReporter {
     if (d[key].hasAdded) {
       io.writeln("Added ${pluralize(key)}:\n");
       d[key].forEachAdded((String idx, Object el) {
-        //{name: dart-core.Deprecated, parameters: ["Dart sdk v. 1.8"]}
-        if (formatter != null) { el = formatter(el); }
+        if (formatter != null) { el = formatter(el, link: true); }
         io.writeln("* $el");
       });
       io.writeln("\n---\n");
@@ -272,7 +271,7 @@ class FileReporter {
     if (d[key].hasRemoved) {
       io.writeln("Removed ${pluralize(key)}:\n");
       d[key].forEachRemoved((String idx, Object el) {
-        if (formatter != null) { el = formatter(el); }
+        if (formatter != null) { el = formatter(el, link: false); }
         io.writeln("* $el");
       });
       io.writeln("\n---\n");
@@ -291,7 +290,7 @@ class FileReporter {
 
   void reportEachClassThing(String classCategory, DiffNode d) {
     d.forEachAdded((idx, klass) {
-      io.writeln("New $classCategory [${klass['name']}](#)");
+      io.writeln("New $classCategory ${mdLinkToDartlang(klass['qualifiedName'])}");
       io.writeln("\n---\n");
     });
     erase(d.added);
@@ -412,7 +411,7 @@ class FileReporter {
   String simpleType(List<Map> t) {
     if (t == null) { return null; }
     return t.map((Map<String,Object> ty) =>
-        (ty["outer"] as String).replaceFirst("dart-core.", "") + ((ty["inner"] as List).isEmpty ? "" : "<${simpleType(ty["inner"])}>")
+        decoratedName(ty["outer"] as String) + ((ty["inner"] as List).isEmpty ? "" : "<${simpleType(ty["inner"])}>")
     ).join(",");
   }
 
