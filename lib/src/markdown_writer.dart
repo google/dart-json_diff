@@ -9,7 +9,7 @@ class MarkdownWriter {
   void close() {
     if (h1Buffer != null) {
       io.writeln(h1Buffer);
-      io.writeln("_No changes in this package._");
+      io.writeln('_No changes in this package._');
     }
     if (io != stdout) {
       Future.wait([io.close()]);
@@ -30,28 +30,28 @@ class MarkdownWriter {
   }
   
   void writeBad(String s, String s2) {
-    io..writeln("<p style='color: red;'>$s</p>")
-        ..writeln("<pre><code style='color: red;'>$s2</code></pre>")
-        ..writeln("<hr />");
+    io..writeln('<p style="color: red;">$s</p>')
+        ..writeln('<pre><code style="color: red;">$s2</code></pre>')
+        ..writeln('<hr />');
   }
   
   void writeBlockquote(String s) {
-    String joined = s.split("\n").map((m) => "> $m\n").join();
+    String joined = s.split('\n').map((m) => '> $m\n').join();
     //print("SPLITTING ON NEWLINES YIELDS:");
     //print(joined);
     io.writeln(joined);
   }
 
   void writeCodeblockHr(String s) {
-    io.writeln("```dart\n${s}\n```\n---");
+    io.writeln('```dart\n${s}\n```\n---');
   }
 
   void bufferH1(String s) {
-    h1Buffer = "$s\n${'=' * s.length}\n";
+    h1Buffer = '$s\n${'=' * s.length}\n';
   }
 
   void bufferH2(String s) {
-    h2Buffer = "$s\n${'-' * s.length}\n";
+    h2Buffer = '$s\n${'-' * s.length}\n';
   }
 
   void writeMetadata(String packageName) {
@@ -67,43 +67,43 @@ permalink: /$packageName/
     String theNewStr = theNew.toString();
     if (blockquote) {
       if (theOldStr.isEmpty) {
-        writeln("Was: _empty_");
+        writeln('Was: _empty_');
       } else {
-        writeln("Was:\n");
+        writeln('Was:\n');
         writeBlockquote(highlightDeleted(theOldStr, theNewStr));
         //writeBlockquote(theOldStr);
       }
       if (theNewStr.isEmpty) {
-        writeln("Now: _empty_");
+        writeln('Now: _empty_');
       } else {
-        writeln("Now:\n");
+        writeln('Now:\n');
         writeBlockquote(highlightInserted(theOldStr, theNewStr));
         //writeBlockquote(theNewStr);
       }
     } else {
-      if (theOldStr.isEmpty) { theOldStr = "_empty_"; }
+      if (theOldStr.isEmpty) { theOldStr = '_empty_'; }
       else if (link)         { theOldStr = decoratedName(theOldStr); }
-      else                   { theOldStr = "`$theOldStr`"; }
-      if (theNewStr.isEmpty) { theNewStr = "_empty_"; }
+      else                   { theOldStr = '`$theOldStr`'; }
+      if (theNewStr.isEmpty) { theNewStr = '_empty_'; }
       else if (link)         { theNewStr = mdLinkToDartlang(theNewStr); }
-      else                   { theNewStr = "`$theNewStr`"; }
-      writeln("Was: $theOldStr\n");
-      writeln("Now: $theNewStr");
+      else                   { theNewStr = '`$theNewStr`'; }
+      writeln('Was: $theOldStr\n');
+      writeln('Now: $theNewStr');
     }
   }
 }
 
 String highlightInserted(String theOld, String theNew) {
   List<Diff> diffResult = diffAndCleanup(theOld, theNew);
-  String result = "";
+  String result = '';
   diffResult.forEach((Diff d) {
     if (d.operation == DIFF_EQUAL) { result += d.text; }
     else if (d.operation == DIFF_INSERT) {
       // TODO: more block element tags
       if (d.text.contains('<blockquote>') || d.text.contains('<p>') || d.text.contains('<pre>')) {
-        result += "<div style='background-color: #9F9; display: inline-block; padding: 2px; margin: 0 1px;'>${d.text}</div>";
+        result += '<div style="background-color: #9F9; display: inline-block; padding: 2px; margin: 0 1px;">${d.text}</div>';
       } else {
-        result += "<span style='background-color: #9F9; padding: 1px;'>${d.text}</span>";
+        result += '<span style="background-color: #9F9; padding: 1px;">${d.text}</span>';
       }
     }
   });
@@ -118,9 +118,9 @@ String highlightDeleted(String theOld, String theNew) {
     else if (d.operation == DIFF_DELETE) {
       // TODO: more block element tags
       if (d.text.contains('<blockquote>') || d.text.contains('<p>') || d.text.contains('<pre>')) {
-        result += "<div style='background-color: #F99; display: inline-block; padding: 1px; margin: 0 1px;'>${d.text}</div>";
+        result += '<div style="background-color: #F99; display: inline-block; padding: 1px; margin: 0 1px;">${d.text}</div>';
       } else {
-        result += "<span style='background-color: #F99; padding: 1px; margin: 0 1px;'>${d.text}</span>";
+        result += '<span style="background-color: #F99; padding: 1px; margin: 0 1px;">${d.text}</span>';
       }
     }
   });

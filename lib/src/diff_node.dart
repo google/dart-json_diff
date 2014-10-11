@@ -90,31 +90,31 @@ class DiffNode {
     }
   }
 
-  String toString({String gap: "", bool pretty: true}) {
-    String result = "";
+  String toString({String gap: '', bool pretty: true}) {
+    String result = '';
     String nl = "\n";
-    String ss = "  ";
+    String ss = '  ';
     if (!pretty) {
-      nl = "";
-      gap = "";
-      ss = "";
+      nl = '';
+      gap = '';
+      ss = '';
     }
     if (metadata.isNotEmpty) {
-      result += "$nl${gap}metadata: $metadata,";
+      result += '$nl${gap}metadata: $metadata,';
     }
     if (added.isNotEmpty) {
-      result += "$nl${gap}added: $added,";
+      result += '$nl${gap}added: $added,';
     }
     if (removed.isNotEmpty) {
-      result += "$nl${gap}removed: $removed,";
+      result += '$nl${gap}removed: $removed,';
     }
     if (changed.isNotEmpty) {
-      result += "$nl${gap}changed: $changed,";
+      result += '$nl${gap}changed: $changed,';
     }
     if (node.isNotEmpty) {
-      result += "$nl${gap}{$nl";
-      node.forEach((key, d) => result += "$gap${ss}$key: ${d.toString(gap: gap+"    ", pretty: pretty)}");
-      result += "$nl${gap}}";
+      result += '$nl${gap}{$nl';
+      node.forEach((key, d) => result += '$gap${ss}$key: ${d.toString(gap: gap+'    ', pretty: pretty)}');
+      result += '$nl${gap}}';
     }
     return result;
   }

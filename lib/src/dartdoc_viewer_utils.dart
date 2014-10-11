@@ -11,8 +11,8 @@ String mdLinkToDartlang(String qualifiedName, [String text]) {
 
 String decoratedName(String qualifiedName) {
   return qualifiedName
-        .replaceAll("_", "\\_")
-        .replaceFirst("dart-core.", "")
+        .replaceAll('_', '\\_')
+        .replaceFirst('dart-core.', '')
         .replaceAll('-dom-', '-')
         .replaceAll('-', ':');
 }

@@ -13,21 +13,21 @@ class JsonDiffer {
       leftJson = _leftJson;
       rightJson = _rightJson;
     } else {
-      throw new FormatException("JSON must be a single object");
+      throw new FormatException('JSON must be a single object');
     }
   }
   
   void ensureIdentical(List<String> topLevelFields) {
     for (String field in topLevelFields) {
       if (!leftJson.containsKey(field)) {
-        throw new UncomparableJsonException("left does not contain field '$field'");
+        throw new UncomparableJsonException('left does not contain field "$field"');
       }
       if (!rightJson.containsKey(field)) {
-        throw new UncomparableJsonException("right does not contain field '$field'");
+        throw new UncomparableJsonException('right does not contain field "$field"');
       }
       if (leftJson[field] != rightJson[field]) {
         throw new UncomparableJsonException(
-            "unequal values for field '$field': ${leftJson[field]} vs ${rightJson[field]}");
+            'Unequal values for field "$field": ${leftJson[field]} vs ${rightJson[field]}');
       }
     }
   }
