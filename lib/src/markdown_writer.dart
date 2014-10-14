@@ -1,15 +1,25 @@
 part of shapeshift;
 
 class MarkdownWriter {
-  final IOSink io;
-  String h1Buffer, h2Buffer;
+  IOSink _io;
+  Function openIo;
+  String buffer, h1Buffer, h2Buffer;
 
-  MarkdownWriter(this.io);
+  MarkdownWriter(this.openIo);
+
+  get io {
+    if (_io == null) {
+      _io = openIo();
+    }
+    return _io;
+  }
 
   void close() {
-    if (h1Buffer != null) {
-      io.writeln(h1Buffer);
-      io.writeln('_No changes in this package._');
+    if (_io == null) {
+      // TODO: optionally write this message. Otherwise, never open io.
+      //io.writeln(h1Buffer);
+      //io.writeln('_No changes in this package._');
+      return;
     }
     if (io != stdout) {
       Future.wait([io.close()]);
@@ -17,6 +27,10 @@ class MarkdownWriter {
   }
   
   void writeln(String s) {
+    if (buffer != null) {
+      io.writeln(buffer);
+      buffer = null;
+    }
     if (h1Buffer != null) {
       io.writeln(h1Buffer);
       h1Buffer = null;
@@ -55,11 +69,11 @@ class MarkdownWriter {
   }
 
   void writeMetadata(String packageName) {
-    io.writeln("""---
+    buffer = """---
 layout: page
 title: $packageName
 permalink: /$packageName/
----""");
+---""";
   }
 
   void writeWasNow(Object theOld, Object theNew, {bool blockquote: false, bool link: false}) {

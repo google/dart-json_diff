@@ -38,7 +38,7 @@ class PackageReporter {
     int i = 0;
     rightLs.forEach((String file) {
       i += 1;
-      if (i < 1000) {
+      if (i < 1200) {
         file = file.replaceFirst(rightPath, '');
         if (file == '/docgen/index.json' || file == '/docgen/library_list.json' || !file.endsWith('.json')) {
           print('Skipping $file');
@@ -78,12 +78,12 @@ class PackageReporter {
 
   void setIo(String packageName) {
     if (out == null) {
-      io = new MarkdownWriter(stdout);
+      io = new MarkdownWriter(() => stdout);
       return;
     }
 
     Directory dir = new Directory(out)..createSync(recursive: true);
-    io = new MarkdownWriter((new File('$out/$packageName.markdown')..createSync(recursive: true)).openWrite());
+    io = new MarkdownWriter(() => (new File('$out/$packageName.markdown')..createSync(recursive: true)).openWrite());
     io.writeMetadata(packageName);
   }
 
@@ -97,7 +97,6 @@ class PackageReporter {
 }
 
 class FileReporter {
-
   final String fileName;
   final DiffNode diff;
   final MarkdownWriter io;
@@ -110,6 +109,7 @@ class FileReporter {
     if (diff == null) {
       return;
     }
+
     if (diff.metadata['packageName'] != null) {
       io.bufferH1(diff.metadata['qualifiedName']);
       reportPackage();
@@ -244,6 +244,16 @@ class FileReporter {
     }
 
     variables.forEach((key, variable) {
+      if (!variable.metadata.containsKey('qualifiedName')) {
+        // Magically renamed (I suspect docgen).
+        if (variable.changed.containsKey('qualifiedName')) {
+          var oldNew = variable.changed['qualifiedName'];
+          io.writeBad('The `$key` variable\'s qualifiedName changed from ${oldNew[0]} to ${oldNew[1]}', null);
+        } else {
+          io.writeBad('TODO: WHAT?', null);
+        }
+        return;
+      }
       var link = mdLinkToDartlang(variable.metadata['qualifiedName'], key);
       if (variable.hasChanged) {
         variable.forEachChanged((attribute, value) {
