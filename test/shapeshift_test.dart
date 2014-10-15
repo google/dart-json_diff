@@ -158,6 +158,19 @@ void main() {
     expect(node.node['a'].changed, isEmpty);
   });
 
+  test('JsonDiffer diff() with a new object at the start of a list', () {
+    differ = new JsonDiffer('{"a": [{"x":1},{"y":2}]}', '{"a": [{"z":4},{"x":1},{"y":2}]}');
+    DiffNode node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, hasLength(1));
+    expect(node.node['a'].added, hasLength(1));
+    expect(node.node['a'].added['0'], equals({'z': 4}));
+    expect(node.node['a'].removed, isEmpty);
+    expect(node.node['a'].changed, isEmpty);
+  });
+
   test('JsonDiffer diff() with multiple new values at the start of a list', () {
     differ = new JsonDiffer('{"a": [1,2]}', '{"a": [4,8,1,2]}');
     DiffNode node = differ.diff();

@@ -44,9 +44,9 @@ class MarkdownWriter {
   }
   
   void writeBad(String s, String s2) {
-    io..writeln('<p style="color: red;">$s</p>')
-        ..writeln('<pre><code style="color: red;">$s2</code></pre>')
-        ..writeln('<hr />');
+    writeln('<p style="color: red;">$s</p>');
+    writeln('<pre><code style="color: red;">$s2</code></pre>');
+    writeln('<hr />');
   }
   
   void writeBlockquote(String s) {

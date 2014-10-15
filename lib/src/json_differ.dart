@@ -77,6 +77,8 @@ class JsonDiffer {
     return node;
   }
 
+  bool deepEquals(e1, e2) => new DeepCollectionEquality().equals(e1, e2);
+
   DiffNode diffLists(List<Object> left, List<Object> right, String parentKey) {
     DiffNode node = new DiffNode();
     int leftHand = 0;
@@ -84,12 +86,12 @@ class JsonDiffer {
     int rightHand = 0;
     int rightFoot = 0;
     while (leftHand < left.length && rightHand < right.length) {
-      if (left[leftHand] != right[rightHand]) {
+      if (!deepEquals(left[leftHand], right[rightHand])) {
         bool foundMissing = false;
         // Walk hands up one at a time. Feet keep track of where we were.
         while (true) {
           rightHand++;
-          if (rightHand < right.length && left[leftFoot] == right[rightHand]) {
+          if (rightHand < right.length && deepEquals(left[leftFoot], right[rightHand])) {
             // Found it: the right elements at [rightFoot, rightHand-1] were added in right.
             for (int i=rightFoot; i<rightHand; i++) {
               node.added[i.toString()] = right[i];
@@ -101,7 +103,7 @@ class JsonDiffer {
           }
 
           leftHand++;
-          if (leftHand < left.length && left[leftHand] == right[rightFoot]) {
+          if (leftHand < left.length && deepEquals(left[leftHand], right[rightFoot])) {
             // Found it: The left elements at [leftFoot, leftHand-1] were removed from left.
             for (int i=leftFoot; i<leftHand; i++) {
               node.removed[i.toString()] = left[i];

@@ -332,16 +332,30 @@ class FileReporter {
   }
 
   void reportEachClassThing(String classCategory, DiffNode d) {
-    d.forEachAdded((idx, klass) {
-      io.writeln('New $classCategory ${mdLinkToDartlang(klass['qualifiedName'], klass['name'])}');
+    if (d.hasAdded) {
+      var cat = d.added.length == 1 ? classCategory : pluralize(classCategory);
+      var names = d.added.values.map((klass) => mdLinkToDartlang(klass['qualifiedName'], klass['name'])).join(', ');
+      io.writeln('New $cat: $names.');
       io.writeln('\n---\n');
-    });
-    erase(d.added);
+      erase(d.added);
+    }
 
-    d.forEach((String s, DiffNode classThing) {
-      io.writeBad('TODO: changed $classCategory $s:', classThing.toString());
+    d.forEach((String classThingName, DiffNode classThing) {
+      if (classThing.hasChanged &&
+          classThing.changed.containsKey('name') &&
+          classThing.changed.containsKey('qualifiedName')) {
+        // A "changed" class thing probably means a class was removed and
+        // another was added, at the same index in the class thing list.
+        // Awkward.
+        var changed = classThing.changed;
+        var newThingLink = mdLinkToDartlang(changed['qualifiedName'][1], changed['name'][1]);
+        io.writeln('Removed $classCategory: ${changed['name'][0]}.');
+        io.writeln('\n---\n');
+        io.writeln('New $classCategory: $newThingLink.');
+        io.writeln('\n---\n');
+        erase(classThing.changed);
+      }
     });
-    erase(d.node);
   }
   
   void reportEachMethodThing(String methodCategory, DiffNode d, { String parenthetical:""}) {
