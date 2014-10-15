@@ -332,6 +332,14 @@ class FileReporter {
   }
 
   void reportEachClassThing(String classCategory, DiffNode d) {
+    if (d.hasRemoved) {
+      var cat = d.removed.length == 1 ? classCategory : pluralize(classCategory);
+      var names = d.removed.values.map((klass) => klass['name']).join(', ');
+      io.writeln('Removed $cat: $names.');
+      io.writeln('\n---\n');
+      erase(d.removed);
+    }
+
     if (d.hasAdded) {
       var cat = d.added.length == 1 ? classCategory : pluralize(classCategory);
       var names = d.added.values.map((klass) => mdLinkToDartlang(klass['qualifiedName'], klass['name'])).join(', ');
