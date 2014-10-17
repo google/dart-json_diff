@@ -1,7 +1,6 @@
-name: shapeshift
-description: A sample command-line application
+name: json_diff
+description: Utilities for diffing two JSON objects
 dependencies:
-  args: '>=0.12.0'
   collection: '>=1.0.0'
   diff_match_patch: '>=0.2.1'
 dev_dependencies:

@@ -1,8 +1,8 @@
-/// Unit tests for shapeshift.
-library shapeshiftTests;
+/// Unit tests for json_diff.
+library json_diff_tests;
 
 import 'dart:convert';
-import 'package:shapeshift/shapeshift.dart';
+import 'package:json_diff/json_diff.dart';
 import 'package:unittest/unittest.dart';
 
 void main() {
@@ -18,9 +18,9 @@ void main() {
   test('JsonDiffer initializes OK', () {
     differ = new JsonDiffer('{"a": 1}', '{"b": 1}');
     expect(differ.leftJson['a'], equals(1));
-    
+
     expect(() => new JsonDiffer('{}', '{}'), returnsNormally);
-    
+
     expect(necksDiffer.leftJson['owner'], equals(necks2000Map['owner']));
     expect(necksDiffer.rightJson['owner'], equals(necks2010Map['owner']));
   });
@@ -198,7 +198,7 @@ void main() {
     expect(node.node['a'].node['0'].changed, hasLength(1));
     expect(node.node['a'].node['0'].changed['b'], equals([1, 2]));
   });
-  
+
   // TODO: Test atomics
   // TODO: Test keepMetadata
 }
