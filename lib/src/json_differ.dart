@@ -1,4 +1,4 @@
-part of shapeshift;
+part of json_diff;
 
 class JsonDiffer {
   Map<String,Object> leftJson, rightJson;

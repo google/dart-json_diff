@@ -1,4 +1,4 @@
-part of shapeshift;
+part of json_diff;
 
 class DiffNode {
   final Map<String,DiffNode> node = new Map<String,DiffNode>();
