@@ -1,3 +1,6 @@
+// Copyright 2014 Google Inc. All Rights Reserved.
+// Licensed under the Apache License, Version 2.0, found in the LICENSE file.
+
 /// Unit tests for json_diff.
 library json_diff_tests;
 
