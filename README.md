@@ -24,6 +24,22 @@ diff.node['a'].added    // => {"z": 16}
 diff.node['a'].removed  // => {"y": 8}
 ```
 
+So that's pretty fun. So when you diff two JSON strings, you get back a
+DiffNode. A DiffNode is a heirarchical structure that vaguely mirrors the
+structure of the input JSON strings. In this example, the top-level DiffNode we
+got back has
+
+* an `added` property, which is a Map of top-level properties that
+  were _not_ found in `left`, and _were_ found in `right`.
+* a `removed` property, which is a Map of top-level properties that were found
+  in `left`, but were `not` found in `right`.
+* a `changed` property, which is a Map of top-level properties whose values are
+  different in `left` and in `right`. The values in this Map are two-element
+  Arrays. The 0th element is the old value (from `left`), and the 1st element
+  is the new value (from `right`).
+* a `node` property, a Map of the properties found in both `left` and `right`
+  that have deep differences. The values of this Map are more DiffNodes.
+
 Contributing
 ------------
 
