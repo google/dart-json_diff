@@ -203,7 +203,7 @@ void main() {
   });
 
   // TODO: Test atomics
-  // TODO: Test keepMetadata
+  // TODO: Test metadataToKeep
 }
 
 String jsonFrom(Map<String,Object> obj) {

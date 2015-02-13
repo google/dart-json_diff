@@ -6,7 +6,8 @@ Generate a diff between two JSON strings.
 Usage
 -----
 
-Here's a basic example which features a deleted object, a new object, and a changed object:
+Here's a basic example which features a deleted object, a new object, a changed
+object, and a deeply changed object:
 
 ```dart
 import 'package:json_diff/json_diff.dart';
@@ -19,9 +20,9 @@ diff.added              // => {"e": 11}
 diff.removed            // => {"a": 2}
 diff.changed            // => {"b": [3, 7]}
 diff.node               // => a Map<String,DiffNode>
-diff.node['a']          // => a DiffNode
-diff.node['a'].added    // => {"z": 16}
-diff.node['a'].removed  // => {"y": 8}
+diff.node['d']          // => a DiffNode
+diff.node['d'].added    // => {"z": 16}
+diff.node['d'].removed  // => {"y": 8}
 ```
 
 So that's pretty fun. So when you diff two JSON strings, you get back a

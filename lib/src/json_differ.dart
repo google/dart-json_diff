@@ -3,11 +3,19 @@
 
 part of json_diff;
 
+/// A configurable class that can produce a diff of two JSON Strings.
 class JsonDiffer {
   Map<String,Object> leftJson, rightJson;
   final List<String> atomics = new List<String>();
   final List<String> metadataToKeep = new List<String>();
   
+  /// Constructs a new JsonDiffer using [leftString] and [rightString], two
+  /// JSON objects represented as Dart strings.
+  ///
+  /// If the two JSON objects that need to be diffed are only available as
+  /// Dart Maps, you can use the
+  /// [dart:convert](https://api.dartlang.org/apidocs/channels/stable/dartdoc-viewer/dart:convert)
+  /// library to encode each Map into a JSON String.
   JsonDiffer(leftString, rightString) {
     Object _leftJson = new JsonDecoder().convert(leftString);
     Object _rightJson = new JsonDecoder().convert(rightString);
@@ -20,6 +28,17 @@ class JsonDiffer {
     }
   }
   
+  /// Throws an exception if the values of each of the [topLevelFields] are not
+  /// equal.
+  ///
+  /// This is useful as a sanity check before diffing two JSON objects that are
+  /// expected to be partially identical. For example, if you are comparing
+  /// two historical versions of the same object, then each one should have the
+  /// same "name" field:
+  ///
+  ///     // Instantiate differ.
+  ///     differ.ensureIdentical(['name']);
+  ///     // Perform diff.
   void ensureIdentical(List<String> topLevelFields) {
     for (String field in topLevelFields) {
       if (!leftJson.containsKey(field)) {
@@ -35,19 +54,25 @@ class JsonDiffer {
     }
   }
 
+  /// Compare the two JSON Strings, producing a [DiffNode].
+  ///
+  /// The differ will walk the entire object graph of each JSON object,
+  /// tracking all additions, deletions, and changes. Please see the
+  /// documentation for [DiffNode] to understand how to access the differences
+  /// found between the two JSON Strings.
   DiffNode diff() {
     Map<String,Object> added = new Map<String,Object>();
     Map<String,Object> removed = new Map<String,Object>();
     Map<String,Object> changed = new Map<String,Object>();
 
-    DiffNode d = diffObjects(leftJson, rightJson);
+    DiffNode d = _diffObjects(leftJson, rightJson);
     d.prune();
     return d;
   }
 
-  DiffNode diffObjects(Map<String,Object> left, Map<String,Object> right) {
+  DiffNode _diffObjects(Map<String,Object> left, Map<String,Object> right) {
     DiffNode node = new DiffNode();
-    keepMetadata(node, left, right);
+    _keepMetadata(node, left, right);
     left.forEach((String key, Object leftValue) {
       if (!right.containsKey(key)) {
         // [key] is missing from [right]
@@ -61,9 +86,9 @@ class JsonDiffer {
         // deep maps or some such thing.
         node.changed[key] = [leftValue, rightValue];
       } else if (leftValue is List && rightValue is List) {
-        node[key] = diffLists(leftValue, rightValue, key);
+        node[key] = _diffLists(leftValue, rightValue, key);
       } else if (leftValue is Map && rightValue is Map) {
-        node[key] = diffObjects(leftValue, rightValue);
+        node[key] = _diffObjects(leftValue, rightValue);
       } else if (leftValue != rightValue) {
         // value is different between [left] and [right]
         node.changed[key] = [leftValue, rightValue];
@@ -80,21 +105,21 @@ class JsonDiffer {
     return node;
   }
 
-  bool deepEquals(e1, e2) => new DeepCollectionEquality().equals(e1, e2);
+  bool _deepEquals(e1, e2) => new DeepCollectionEquality().equals(e1, e2);
 
-  DiffNode diffLists(List<Object> left, List<Object> right, String parentKey) {
+  DiffNode _diffLists(List<Object> left, List<Object> right, String parentKey) {
     DiffNode node = new DiffNode();
     int leftHand = 0;
     int leftFoot = 0;
     int rightHand = 0;
     int rightFoot = 0;
     while (leftHand < left.length && rightHand < right.length) {
-      if (!deepEquals(left[leftHand], right[rightHand])) {
+      if (!_deepEquals(left[leftHand], right[rightHand])) {
         bool foundMissing = false;
         // Walk hands up one at a time. Feet keep track of where we were.
         while (true) {
           rightHand++;
-          if (rightHand < right.length && deepEquals(left[leftFoot], right[rightHand])) {
+          if (rightHand < right.length && _deepEquals(left[leftFoot], right[rightHand])) {
             // Found it: the right elements at [rightFoot, rightHand-1] were added in right.
             for (int i=rightFoot; i<rightHand; i++) {
               node.added[i.toString()] = right[i];
@@ -106,7 +131,7 @@ class JsonDiffer {
           }
 
           leftHand++;
-          if (leftHand < left.length && deepEquals(left[leftHand], right[rightFoot])) {
+          if (leftHand < left.length && _deepEquals(left[leftHand], right[rightFoot])) {
             // Found it: The left elements at [leftFoot, leftHand-1] were removed from left.
             for (int i=leftFoot; i<leftHand; i++) {
               node.removed[i.toString()] = left[i];
@@ -131,9 +156,9 @@ class JsonDiffer {
             // deep maps or some such thing.
             node.changed[leftFoot.toString()] = [left[leftFoot], right[rightFoot]];
           } else if (left[leftFoot] is Map && right[rightFoot] is Map) {
-            node[leftFoot.toString()] = diffObjects(left[leftFoot], right[rightFoot]);
+            node[leftFoot.toString()] = _diffObjects(left[leftFoot], right[rightFoot]);
           } else if (left[leftFoot] is List && right[rightFoot] is List) {
-            node[leftFoot.toString()] = diffLists(left[leftFoot], right[rightFoot], null);
+            node[leftFoot.toString()] = _diffLists(left[leftFoot], right[rightFoot], null);
           } else {
             node.changed[leftFoot.toString()] = [left[leftFoot], right[rightFoot]];
           }
@@ -155,7 +180,7 @@ class JsonDiffer {
     return node;
   }
 
-  void keepMetadata(DiffNode node, Map left, Map right) {
+  void _keepMetadata(DiffNode node, Map left, Map right) {
     metadataToKeep.forEach((String key) {
       if (left.containsKey(key) && right.containsKey(key) && left[key] == right[key]) {
         node.metadata[key] = left[key];
@@ -164,6 +189,7 @@ class JsonDiffer {
   }
 }
 
+/// An exception that is thrown when two JSON Strings did not pass a basic sanity test.
 class UncomparableJsonException implements Exception {
   final String msg;
   const UncomparableJsonException(this.msg);
