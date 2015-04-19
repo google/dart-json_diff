@@ -202,13 +202,11 @@ void main() {
     expect(node.node['a'].node['0'].changed['b'], equals([1, 2]));
   });
 
-  // TODO: Test atomics
   // TODO: Test metadataToKeep
 }
 
-String jsonFrom(Map<String,Object> obj) {
-  return new JsonEncoder().convert(obj);
-}
+String jsonFrom(Map<String,Object> obj) =>
+  new JsonEncoder().convert(obj);
 
 const Map<String,Object> necks2000Map = const {
   'name': 'New York Necks',
