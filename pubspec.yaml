@@ -1,5 +1,5 @@
 name: json_diff
-version: 0.1.1
+version: 0.1.2
 author: Sam Rawlins <srawlins@google.com>
 description: Utilities for diffing two JSON objects
 homepage: https://github.com/google/dart-json_diff
