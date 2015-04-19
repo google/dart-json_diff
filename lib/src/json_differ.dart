@@ -8,6 +8,7 @@ class JsonDiffer {
   Map<String,Object> leftJson, rightJson;
   final List<String> atomics = new List<String>();
   final List<String> metadataToKeep = new List<String>();
+  final List<String> ignored = new List<String>();
   
   /// Constructs a new JsonDiffer using [leftString] and [rightString], two
   /// JSON objects represented as Dart strings.
@@ -60,28 +61,25 @@ class JsonDiffer {
   /// tracking all additions, deletions, and changes. Please see the
   /// documentation for [DiffNode] to understand how to access the differences
   /// found between the two JSON Strings.
-  DiffNode diff() {
-    Map<String,Object> added = new Map<String,Object>();
-    Map<String,Object> removed = new Map<String,Object>();
-    Map<String,Object> changed = new Map<String,Object>();
-
-    DiffNode d = _diffObjects(leftJson, rightJson);
-    d.prune();
-    return d;
-  }
+  DiffNode diff() => _diffObjects(leftJson, rightJson)
+      ..prune();
 
   DiffNode _diffObjects(Map<String,Object> left, Map<String,Object> right) {
     DiffNode node = new DiffNode();
     _keepMetadata(node, left, right);
     left.forEach((String key, Object leftValue) {
+      if (ignored.contains(key))
+        return;
+
       if (!right.containsKey(key)) {
-        // [key] is missing from [right]
+        // key is missing from right.
         node.removed[key] = leftValue;
         return;
       }
       
       Object rightValue = right[key];
-      if (atomics.contains(key) && leftValue.toString() != rightValue.toString()) {
+      if (atomics.contains(key)
+          && leftValue.toString() != rightValue.toString()) {
         // Treat leftValue and rightValue as atomic objects, even if they are
         // deep maps or some such thing.
         node.changed[key] = [leftValue, rightValue];
@@ -96,8 +94,11 @@ class JsonDiffer {
     });
     
     right.forEach((String key, Object value) {
+      if (ignored.contains(key))
+        return;
+
       if (!left.containsKey(key)) {
-        // [key] is missing from [left]
+        // key is missing from left.
         node.added[key] = value;
       }
     });

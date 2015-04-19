@@ -10,7 +10,7 @@ import 'package:unittest/unittest.dart';
 void main() {
   JsonDiffer differ;
 
-  test('JsonDiffer keeps top-level atomics whole', () {
+  test('JsonDiffer keeps changed top-level atomics whole', () {
     differ = new JsonDiffer('{"a": {"x": 1}}', '{"a": {"x": 2}}');
     differ.atomics.add('a');
     DiffNode node = differ.diff();
@@ -18,6 +18,26 @@ void main() {
     expect(node.removed, isEmpty);
     expect(node.changed, hasLength(1));
     expect(node.changed['a'], equals([{'x': 1}, {'x': 2}]));
+  });
+
+  test('JsonDiffer keeps new top-level atomics whole', () {
+    differ = new JsonDiffer('{}', '{"a": {"x": 2}}');
+    differ.atomics.add('a');
+    DiffNode node = differ.diff();
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.added, hasLength(1));
+    expect(node.added, equals({'a': {'x': 2}}));
+  });
+
+  test('JsonDiffer keeps removed top-level atomics whole', () {
+    differ = new JsonDiffer('{"a": {"x": 1}}', '{}');
+    differ.atomics.add('a');
+    DiffNode node = differ.diff();
+    expect(node.changed, isEmpty);
+    expect(node.added, isEmpty);
+    expect(node.removed, hasLength(1));
+    expect(node.removed, equals({'a': {'x': 1}}));
   });
 
   test('JsonDiffer doesn\'t treat unchanged atomics differently', () {
