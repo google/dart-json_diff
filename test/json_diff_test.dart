@@ -6,7 +6,7 @@ library json_diff_tests;
 
 import 'dart:convert';
 import 'package:json_diff/json_diff.dart';
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 void main() {
   String necks2000, necks2010;

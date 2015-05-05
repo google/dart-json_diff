@@ -5,7 +5,7 @@
 library atomics_tests;
 
 import 'package:json_diff/json_diff.dart';
-import 'package:unittest/unittest.dart';
+import 'package:test/test.dart';
 
 void main() {
   JsonDiffer differ;
