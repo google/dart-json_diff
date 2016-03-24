@@ -152,7 +152,7 @@ class JsonDiffer {
           // TODO: This notation is wrong for a case such as:
           //     [1,2,3,4,5,6] => [1,4,5,7]
           //     changed.first = [[5, 6], [3,7]
-          if (atomics.contains(parentKey+"[]") && left[leftFoot].toString() != right[rightFoot].toString()) {
+          if (parentKey != null && atomics.contains(parentKey+"[]") && left[leftFoot].toString() != right[rightFoot].toString()) {
             // Treat leftValue and rightValue as atomic objects, even if they are
             // deep maps or some such thing.
             node.changed[leftFoot.toString()] = [left[leftFoot], right[rightFoot]];
