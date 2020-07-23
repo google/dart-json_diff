@@ -151,20 +151,20 @@ class DiffNode {
   String toString() => _diffTexts(this, '').join('\n');
 
   List<String> _diffTexts(DiffNode diff, String path) => [
-    for (final e in diff.removed.entries) ...[
-      '@ Removed from left at path "$path.${e.key}":',
-      '- ${jsonEncode(e.value)}',
-    ],
-    for (final e in diff.added.entries) ...[
-      '@ Added to right at path "$path.${e.key}":',
-      '+ ${jsonEncode(e.value)}'
-    ],
-    for (final e in diff.changed.entries) ...[
-      '@ Changed at path "$path.${e.key}":',
-      '- ${jsonEncode(e.value.first)}',
-      '+ ${jsonEncode(e.value.last)}',
-    ],
-    for(final e in diff.node.entries)
-      ..._diffTexts(e.value, '$path.${e.key}')
-  ];
+        for (final e in diff.removed.entries) ...[
+          '@ Removed from left at path "$path.${e.key}":',
+          '- ${jsonEncode(e.value)}',
+        ],
+        for (final e in diff.added.entries) ...[
+          '@ Added to right at path "$path.${e.key}":',
+          '+ ${jsonEncode(e.value)}'
+        ],
+        for (final e in diff.changed.entries) ...[
+          '@ Changed at path "$path.${e.key}":',
+          '- ${jsonEncode(e.value.first)}',
+          '+ ${jsonEncode(e.value.last)}',
+        ],
+        for (final e in diff.node.entries)
+          ..._diffTexts(e.value, '$path.${e.key}')
+      ];
 }

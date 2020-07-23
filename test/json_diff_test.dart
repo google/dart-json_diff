@@ -9,17 +9,14 @@ import 'package:json_diff/json_diff.dart';
 import 'package:test/test.dart';
 
 void main() {
-  String necks2000, necks2010;
   JsonDiffer differ, necksDiffer;
 
   setUp(() {
-    necks2000 = jsonFrom(necks2000Map);
-    necks2010 = jsonFrom(necks2010Map);
-    necksDiffer = JsonDiffer(necks2000, necks2010);
+    necksDiffer = JsonDiffer.fromJson(necks2000Map, necks2010Map);
   });
 
   test('JsonDiffer initializes OK', () {
-    differ = JsonDiffer('{"a": 1}', '{"b": 1}');
+    differ = JsonDiffer.fromJson({'a': 1}, {'b': 1});
     expect(differ.leftJson['a'], equals(1));
 
     expect(() => JsonDiffer('{}', '{}'), returnsNormally);
@@ -191,7 +188,15 @@ void main() {
   });
 
   test('JsonDiffer diff() with a changed value at the start of a list', () {
-    differ = JsonDiffer('{"a": [{"b": 1}]}', '{"a": [{"b": 2}]}');
+    differ = JsonDiffer.fromJson({
+      'a': [
+        {'b': 1}
+      ]
+    }, {
+      'a': [
+        {'b': 2}
+      ]
+    });
     final node = differ.diff();
     expect(node.added, isEmpty);
     expect(node.removed, isEmpty);
@@ -202,6 +207,44 @@ void main() {
     expect(node.node['a'].changed, isEmpty);
     expect(node.node['a'].node['0'].changed, hasLength(1));
     expect(node.node['a'].node['0'].changed['b'], equals([1, 2]));
+  });
+
+  test(
+      'JsonDiffer diff() with multiple changed values at different indexes of a list',
+      () {
+    final node = JsonDiffer.fromJson({
+      'primary': [
+        {
+          'resolvers': [
+            'foo',
+          ],
+        },
+        {
+          'resolvers': [
+            'same on both',
+          ],
+        },
+      ],
+    }, {
+      'primary': [
+        {
+          'resolvers': [
+            'bar',
+          ],
+        },
+        {
+          'resolvers': [
+            'same on both',
+            'added',
+          ],
+        },
+      ],
+    }).diff();
+
+    expect(node.node['primary'].node['0'].node['resolvers'].changed['0'],
+        equals(['foo', 'bar']));
+    expect(node.node['primary'].node['1'].node['resolvers'].added['1'],
+        equals('added'));
   });
 
   // TODO: Test metadataToKeep
