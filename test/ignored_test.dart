@@ -11,9 +11,9 @@ void main() {
   JsonDiffer differ;
 
   test('JsonDiffer ignores ignored and changed object keys', () {
-    differ = new JsonDiffer('{"a": {"x": 1}}', '{"a": {"x": 2}}');
+    differ = JsonDiffer('{"a": {"x": 1}}', '{"a": {"x": 2}}');
     differ.ignored.add('x');
-    DiffNode node = differ.diff();
+    final node = differ.diff();
     expect(node.added, isEmpty);
     expect(node.removed, isEmpty);
     expect(node.changed, isEmpty);
@@ -21,9 +21,9 @@ void main() {
   });
 
   test('JsonDiffer ignores ignored and new object keys', () {
-    differ = new JsonDiffer('{"a": {}}', '{"a": {"x": 2}}');
+    differ = JsonDiffer('{"a": {}}', '{"a": {"x": 2}}');
     differ.ignored.add('x');
-    DiffNode node = differ.diff();
+    final node = differ.diff();
     expect(node.added, isEmpty);
     expect(node.removed, isEmpty);
     expect(node.changed, isEmpty);
@@ -31,9 +31,9 @@ void main() {
   });
 
   test('JsonDiffer ignores ignored and removed object keys', () {
-    differ = new JsonDiffer('{"a": {"x": 1}}', '{"a": {}}');
+    differ = JsonDiffer('{"a": {"x": 1}}', '{"a": {}}');
     differ.ignored.add('x');
-    DiffNode node = differ.diff();
+    final node = differ.diff();
     expect(node.added, isEmpty);
     expect(node.removed, isEmpty);
     expect(node.changed, isEmpty);
