@@ -148,33 +148,23 @@ class DiffNode {
   }
 
   @override
-  String toString({String gap = '', bool pretty = true}) {
-    var result = '';
-    var nl = '\n';
-    var ss = '  ';
-    if (!pretty) {
-      nl = '';
-      gap = '';
-      ss = '';
-    }
-    if (metadata.isNotEmpty) {
-      result += '$nl${gap}metadata: $metadata,';
-    }
-    if (added.isNotEmpty) {
-      result += '$nl${gap}added: $added,';
-    }
-    if (removed.isNotEmpty) {
-      result += '$nl${gap}removed: $removed,';
-    }
-    if (changed.isNotEmpty) {
-      result += '$nl${gap}changed: $changed,';
-    }
-    if (node.isNotEmpty) {
-      result += '$nl${gap}{$nl';
-      node.forEach((key, d) => result +=
-          '$gap${ss}$key: ${d.toString(gap: gap + '    ', pretty: pretty)}');
-      result += '$nl${gap}}';
-    }
-    return result;
-  }
+  String toString() => _diffTexts(this, '').join('\n');
+
+  List<String> _diffTexts(DiffNode diff, String path) => [
+    for (final e in diff.removed.entries) ...[
+      '@ Removed from left at path "$path.${e.key}":',
+      '- ${jsonEncode(e.value)}',
+    ],
+    for (final e in diff.added.entries) ...[
+      '@ Added to right at path "$path.${e.key}":',
+      '+ ${jsonEncode(e.value)}'
+    ],
+    for (final e in diff.changed.entries) ...[
+      '@ Changed at path "$path.${e.key}":',
+      '- ${jsonEncode(e.value.first)}',
+      '+ ${jsonEncode(e.value.last)}',
+    ],
+    for(final e in diff.node.entries)
+      ..._diffTexts(e.value, '$path.${e.key}')
+  ];
 }
