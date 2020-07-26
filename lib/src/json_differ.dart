@@ -9,7 +9,6 @@ class JsonDiffer {
   final List<String> atomics = <String>[];
   final List<String> metadataToKeep = <String>[];
   final List<String> ignored = <String>[];
-  bool debug;
 
   /// Constructs a new JsonDiffer using [leftString] and [rightString], two
   /// JSON objects represented as Dart strings.
@@ -20,10 +19,8 @@ class JsonDiffer {
   /// library to encode each Map into a JSON String.
   JsonDiffer(
     String leftString,
-    String rightString, {
-    bool debug = false,
-  }) {
-    this.debug = debug;
+    String rightString,
+  ) {
     Object _leftJson = jsonDecode(leftString);
     Object _rightJson = jsonDecode(rightString);
 
@@ -37,10 +34,8 @@ class JsonDiffer {
 
   JsonDiffer.fromJson(
     Map<String, Object> leftJson,
-    Map<String, Object> rightJson, {
-    bool debug = false,
-  }) {
-    this.debug = debug;
+    Map<String, Object> rightJson,
+  ) {
     if (leftJson != null && rightJson != null) {
       this.leftJson = leftJson;
       this.rightJson = rightJson;
@@ -89,9 +84,6 @@ class JsonDiffer {
     final node = DiffNode();
     _keepMetadata(node, left, right);
     left.forEach((String key, Object leftValue) {
-      if (debug) {
-        print('Diffing object "$key" at path "$path"');
-      }
       if (ignored.contains(key)) {
         return;
       }
@@ -137,9 +129,6 @@ class JsonDiffer {
 
   DiffNode _diffLists(
       List<Object> left, List<Object> right, String parentKey, String path) {
-    if (debug) {
-      print('Diffing list "$parentKey" at path "$path"');
-    }
     final node = DiffNode();
     var leftHand = 0;
     var leftFoot = 0;
