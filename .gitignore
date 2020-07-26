@@ -14,3 +14,16 @@ pubspec.lock
 
 diff*
 sdk-*
+
+# Files and directories created by pub
+.dart_tool/
+.packages
+
+# Directory created by dartdoc
+doc/api/
+
+# Mac related files
+**/.DS_Store
+
+# IDEA related files
+.idea
