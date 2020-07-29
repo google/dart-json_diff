@@ -249,16 +249,11 @@ void main() {
 
   test('JsonDiffer diff() with added element after changed element', () {
     const left = {
-      'field': [
-        1
-      ]
+      'field': [1]
     };
 
     const right = {
-      'field': [
-        2,
-        'added'
-      ]
+      'field': [2, 'added']
     };
 
     final node = JsonDiffer.fromJson(left, right).diff();
