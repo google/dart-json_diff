@@ -203,12 +203,12 @@ class JsonDiffer {
     }
 
     // Any new elements at the end of right.
-    for (var i = rightHand; i < right.length; i++) {
+    for (var i = rightFoot; i < right.length; i++) {
       node.added[i.toString()] = right[i];
     }
 
     // Any removed elements at the end of left.
-    for (var i = leftHand; i < left.length; i++) {
+    for (var i = leftFoot; i < left.length; i++) {
       node.removed[i.toString()] = left[i];
     }
 
