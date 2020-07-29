@@ -247,6 +247,21 @@ void main() {
         equals('added'));
   });
 
+  test('JsonDiffer diff() with added element after changed element', () {
+    const left = {
+      'field': [1]
+    };
+
+    const right = {
+      'field': [2, 'added']
+    };
+
+    final node = JsonDiffer.fromJson(left, right).diff();
+
+    expect(node.node['field'].changed['0'], equals([1, 2]));
+    expect(node.node['field'].added['1'], equals('added'));
+  });
+
   // TODO: Test metadataToKeep
 }
 
