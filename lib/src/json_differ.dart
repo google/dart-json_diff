@@ -81,7 +81,7 @@ class JsonDiffer {
 
   DiffNode _diffObjects(
       Map<String, Object> left, Map<String, Object> right, List<Object> path) {
-    final node = DiffNode(List.from(path));
+    final node = DiffNode(path);
     left.forEach((String key, Object leftValue) {
       if (ignored.contains(key)) {
         return;
@@ -128,7 +128,7 @@ class JsonDiffer {
 
   DiffNode _diffLists(List<Object> left, List<Object> right, String parentKey,
       List<Object> path) {
-    final node = DiffNode(List.from(path));
+    final node = DiffNode(path);
     var leftHand = 0;
     var leftFoot = 0;
     var rightHand = 0;
@@ -189,7 +189,7 @@ class JsonDiffer {
                 _diffObjects(leftObject, rightObject, [...path, leftFoot]);
           } else if (leftObject is List && rightObject is List) {
             node[leftFoot] =
-                _diffLists(leftObject, rightObject, null, [path, leftFoot]);
+                _diffLists(leftObject, rightObject, null, [...path, leftFoot]);
           } else {
             node.changed[leftFoot] = [leftObject, rightObject];
           }
