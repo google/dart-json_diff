@@ -77,12 +77,11 @@ class JsonDiffer {
   /// tracking all additions, deletions, and changes. Please see the
   /// documentation for [DiffNode] to understand how to access the differences
   /// found between the two JSON Strings.
-  DiffNode diff() => _diffObjects(leftJson, rightJson, '')..prune();
+  DiffNode diff() => _diffObjects(leftJson, rightJson, [])..prune();
 
   DiffNode _diffObjects(
-      Map<String, Object> left, Map<String, Object> right, String path) {
-    final node = DiffNode();
-    _keepMetadata(node, left, right);
+      Map<String, Object> left, Map<String, Object> right, List<Object> path) {
+    final node = DiffNode(List.from(path));
     left.forEach((String key, Object leftValue) {
       if (ignored.contains(key)) {
         return;
@@ -101,10 +100,10 @@ class JsonDiffer {
         // deep maps or some such thing.
         node.changed[key] = [leftValue, rightValue];
       } else if (leftValue is List && rightValue is List) {
-        node[key] = _diffLists(leftValue, rightValue, key, '$path.$key');
+        node[key] = _diffLists(leftValue, rightValue, key, [...path, key]);
       } else if (leftValue is Map<String, Object> &&
           rightValue is Map<String, Object>) {
-        node[key] = _diffObjects(leftValue, rightValue, '$path.$key');
+        node[key] = _diffObjects(leftValue, rightValue, [...path, key]);
       } else if (leftValue != rightValue) {
         // value is different between [left] and [right]
         node.changed[key] = [leftValue, rightValue];
@@ -127,9 +126,9 @@ class JsonDiffer {
 
   bool _deepEquals(e1, e2) => DeepCollectionEquality.unordered().equals(e1, e2);
 
-  DiffNode _diffLists(
-      List<Object> left, List<Object> right, String parentKey, String path) {
-    final node = DiffNode();
+  DiffNode _diffLists(List<Object> left, List<Object> right, String parentKey,
+      List<Object> path) {
+    final node = DiffNode(List.from(path));
     var leftHand = 0;
     var leftFoot = 0;
     var rightHand = 0;
@@ -144,7 +143,7 @@ class JsonDiffer {
               _deepEquals(left[leftFoot], right[rightHand])) {
             // Found it: the right elements at [rightFoot, rightHand-1] were added in right.
             for (var i = rightFoot; i < rightHand; i++) {
-              node.added[i.toString()] = right[i];
+              node.added[i] = right[i];
             }
             rightFoot = rightHand;
             leftHand = leftFoot;
@@ -157,7 +156,7 @@ class JsonDiffer {
               _deepEquals(left[leftHand], right[rightFoot])) {
             // Found it: The left elements at [leftFoot, leftHand-1] were removed from left.
             for (var i = leftFoot; i < leftHand; i++) {
-              node.removed[i.toString()] = left[i];
+              node.removed[i] = left[i];
             }
             leftFoot = leftHand;
             rightHand = rightFoot;
@@ -183,16 +182,16 @@ class JsonDiffer {
               leftObject.toString() != rightObject.toString()) {
             // Treat leftValue and rightValue as atomic objects, even if they are
             // deep maps or some such thing.
-            node.changed[leftFoot.toString()] = [leftObject, rightObject];
+            node.changed[leftFoot] = [leftObject, rightObject];
           } else if (leftObject is Map<String, Object> &&
               rightObject is Map<String, Object>) {
-            node[leftFoot.toString()] =
-                _diffObjects(leftObject, rightObject, '$path.$leftFoot');
+            node[leftFoot] =
+                _diffObjects(leftObject, rightObject, [...path, leftFoot]);
           } else if (leftObject is List && rightObject is List) {
-            node[leftFoot.toString()] =
-                _diffLists(leftObject, rightObject, null, '$path.$leftFoot');
+            node[leftFoot] =
+                _diffLists(leftObject, rightObject, null, [path, leftFoot]);
           } else {
-            node.changed[leftFoot.toString()] = [leftObject, rightObject];
+            node.changed[leftFoot] = [leftObject, rightObject];
           }
         }
       }
@@ -204,25 +203,35 @@ class JsonDiffer {
 
     // Any new elements at the end of right.
     for (var i = rightFoot; i < right.length; i++) {
-      node.added[i.toString()] = right[i];
+      node.added[i] = right[i];
     }
 
     // Any removed elements at the end of left.
     for (var i = leftFoot; i < left.length; i++) {
-      node.removed[i.toString()] = left[i];
+      node.removed[i] = left[i];
     }
 
-    return node;
-  }
+    // Equal elements that both exist in added
+    // and removed can be considered moved
+    final removedFiltered = node.removed.entries.where((e) {
+      final added = node.added
+          .removeFirstWhere((key, value) => _deepEquals(e.value, value));
 
-  void _keepMetadata(DiffNode node, Map left, Map right) {
-    metadataToKeep.forEach((String key) {
-      if (left.containsKey(key) &&
-          right.containsKey(key) &&
-          left[key] == right[key]) {
-        node.metadata[key] = left[key];
+      if (added != null) {
+        // We've found an equal element in added,
+        // put the element in moved and filter it out from removed.
+        node.moved[e.key as int] = added.key as int;
+        return false;
       }
-    });
+
+      // Element are not present in added, it is simply removed
+      return true;
+    }).toList();
+
+    node.removed.clear();
+    node.removed.addEntries(removedFiltered);
+
+    return node;
   }
 }
 
@@ -234,4 +243,17 @@ class UncomparableJsonException implements Exception {
 
   @override
   String toString() => 'UncomparableJsonException: $msg';
+}
+
+extension<K, V> on Map<K, V> {
+  MapEntry<K, V> removeFirstWhere(bool Function(K, V) test) {
+    for (final entry in entries) {
+      if (test(entry.key, entry.value)) {
+        remove(entry.key);
+        return entry;
+      }
+    }
+
+    return null;
+  }
 }

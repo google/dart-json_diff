@@ -12,17 +12,17 @@ object, and a deeply changed object:
 ```dart
 import 'package:json_diff/json_diff.dart';
 
-Map<String,Object> left = '{"a": 2, "b": 3, "c": 5, "d": {"x": 4, "y": 8}}';
-Map<String,Object> right = '{"b": 7, "c": 5, "d": {"x": 4, "z": 16}, "e": 11}';
-differ = new JsonDiffer(left, right);
+final left = {"a": 2, "b": 3, "c": 5, "d": {"x": 4, "y": 8}};
+final right = {"b": 7, "c": 5, "d": {"x": 4, "z": 16}, "e": 11};
+final differ = JsonDiffer.fromJson(left, right);
 DiffNode diff = differ.diff();
-diff.added              // => {"e": 11}
-diff.removed            // => {"a": 2}
-diff.changed            // => {"b": [3, 7]}
-diff.node               // => a Map<String,DiffNode>
-diff.node['d']          // => a DiffNode
-diff.node['d'].added    // => {"z": 16}
-diff.node['d'].removed  // => {"y": 8}
+print(diff.added);              // => {"e": 11}
+print(diff.removed);            // => {"a": 2}
+print(diff.changed);            // => {"b": [3, 7]}
+print(diff.node);               // => a Map<String,DiffNode>
+print(diff.node['d']);          // => a DiffNode
+print(diff.node['d'].added);    // => {"z": 16}
+print(diff.node['d'].removed);  // => {"y": 8}
 ```
 
 So that's pretty fun. So when you diff two JSON strings, you get back a
@@ -38,8 +38,12 @@ got back has
   different in `left` and in `right`. The values in this Map are two-element
   Arrays. The 0th element is the old value (from `left`), and the 1st element
   is the new value (from `right`).
+* a `moved` property, which is a Map of indexes, where key is the original index 
+  of an element, and value is index in the changed list.
 * a `node` property, a Map of the properties found in both `left` and `right`
   that have deep differences. The values of this Map are more DiffNodes.
+* a `path` property, which is a List of indexes, describing the path from the root
+  where this DiffNode is operating.
 
 Contributing
 ------------

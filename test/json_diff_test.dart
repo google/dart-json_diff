@@ -5,6 +5,7 @@
 library json_diff_tests;
 
 import 'dart:convert';
+
 import 'package:json_diff/json_diff.dart';
 import 'package:test/test.dart';
 
@@ -113,7 +114,7 @@ void main() {
     expect(node.changed, isEmpty);
     expect(node.node, hasLength(1));
     expect(node.node['a'].added, hasLength(1));
-    expect(node.node['a'].added['2'], equals(4));
+    expect(node.node['a'].added[2], equals(4));
     expect(node.node['a'].removed, isEmpty);
     expect(node.node['a'].changed, isEmpty);
   });
@@ -126,7 +127,7 @@ void main() {
     expect(node.changed, isEmpty);
     expect(node.node, hasLength(1));
     expect(node.node['a'].added, hasLength(1));
-    expect(node.node['a'].added['1'], equals(4));
+    expect(node.node['a'].added[1], equals(4));
     expect(node.node['a'].removed, isEmpty);
     expect(node.node['a'].changed, isEmpty);
   });
@@ -140,8 +141,8 @@ void main() {
     expect(node.changed, isEmpty);
     expect(node.node, hasLength(1));
     expect(node.node['a'].added, hasLength(2));
-    expect(node.node['a'].added['1'], equals(4));
-    expect(node.node['a'].added['2'], equals(8));
+    expect(node.node['a'].added[1], equals(4));
+    expect(node.node['a'].added[2], equals(8));
     expect(node.node['a'].removed, isEmpty);
     expect(node.node['a'].changed, isEmpty);
   });
@@ -154,7 +155,7 @@ void main() {
     expect(node.changed, isEmpty);
     expect(node.node, hasLength(1));
     expect(node.node['a'].added, hasLength(1));
-    expect(node.node['a'].added['0'], equals(4));
+    expect(node.node['a'].added[0], equals(4));
     expect(node.node['a'].removed, isEmpty);
     expect(node.node['a'].changed, isEmpty);
   });
@@ -168,7 +169,7 @@ void main() {
     expect(node.changed, isEmpty);
     expect(node.node, hasLength(1));
     expect(node.node['a'].added, hasLength(1));
-    expect(node.node['a'].added['0'], equals({'z': 4}));
+    expect(node.node['a'].added[0], equals({'z': 4}));
     expect(node.node['a'].removed, isEmpty);
     expect(node.node['a'].changed, isEmpty);
   });
@@ -181,8 +182,8 @@ void main() {
     expect(node.changed, isEmpty);
     expect(node.node, hasLength(1));
     expect(node.node['a'].added, hasLength(2));
-    expect(node.node['a'].added['0'], equals(4));
-    expect(node.node['a'].added['1'], equals(8));
+    expect(node.node['a'].added[0], equals(4));
+    expect(node.node['a'].added[1], equals(8));
     expect(node.node['a'].removed, isEmpty);
     expect(node.node['a'].changed, isEmpty);
   });
@@ -205,8 +206,8 @@ void main() {
     expect(node.node['a'].added, isEmpty);
     expect(node.node['a'].removed, isEmpty);
     expect(node.node['a'].changed, isEmpty);
-    expect(node.node['a'].node['0'].changed, hasLength(1));
-    expect(node.node['a'].node['0'].changed['b'], equals([1, 2]));
+    expect(node.node['a'].node[0].changed, hasLength(1));
+    expect(node.node['a'].node[0].changed['b'], equals([1, 2]));
   });
 
   test(
@@ -241,9 +242,9 @@ void main() {
       ],
     }).diff();
 
-    expect(node.node['primary'].node['0'].node['resolvers'].changed['0'],
+    expect(node.node['primary'].node[0].node['resolvers'].changed[0],
         equals(['foo', 'bar']));
-    expect(node.node['primary'].node['1'].node['resolvers'].added['1'],
+    expect(node.node['primary'].node[1].node['resolvers'].added[1],
         equals('added'));
   });
 
@@ -258,11 +259,30 @@ void main() {
 
     final node = JsonDiffer.fromJson(left, right).diff();
 
-    expect(node.node['field'].changed['0'], equals([1, 2]));
-    expect(node.node['field'].added['1'], equals('added'));
+    expect(node.node['field'].changed[0], equals([1, 2]));
+    expect(node.node['field'].added[1], equals('added'));
   });
 
-  // TODO: Test metadataToKeep
+  test('JsonDiffer diff() with complex elements moved in list', () {
+    final node = JsonDiffer.fromJson({
+      'list': [
+        'xxx',
+        'xxx',
+        {'foo': 1},
+        [2],
+      ],
+    }, {
+      'list': [
+        [2],
+        {'foo': 1},
+        'xxx',
+        'xxx',
+      ],
+    }).diff();
+
+    expect(node.node['list'].moved[2], equals(1));
+    expect(node.node['list'].moved[3], equals(0));
+  });
 }
 
 String jsonFrom(Map<String, Object> obj) => JsonEncoder().convert(obj);
