@@ -14,7 +14,7 @@ part of json_diff;
 ///   the _left_ JSON.
 /// * [removed] is a Map of key-value pairs found in the _left_ JSON but not in
 ///   the _right_ JSON.
-/// * [changed] is a Map referenceing immediate values that are different
+/// * [changed] is a Map referencing immediate values that are different
 ///   between the _left_ and _right_ JSONs. Each key in the Map is a key whose
 ///   values changed, mapping to a 2-element array which lists the left value
 ///   and the right value.
@@ -22,27 +22,33 @@ part of json_diff;
 ///   values changed deeply between the left and right JSONs, mapping to a
 ///   DiffNode containing those deep changes.
 class DiffNode {
+  DiffNode(this.path);
+
   /// A Map of deep changes between the two JSON objects.
-  final Map<String, DiffNode> node = <String, DiffNode>{};
+  final node = <Object, DiffNode>{};
 
   /// A Map containing the key/value pairs that were _added_ between the left
   /// JSON and the right.
-  final Map<String, Object> added = <String, Object>{};
+  final added = <Object, Object>{};
 
   /// A Map containing the key/value pairs that were _removed_ between the left
   /// JSON and the right.
-  final Map<String, Object> removed = <String, Object>{};
+  final removed = <Object, Object>{};
 
   /// A Map whose values are 2-element arrays containing the left value and the
   /// right value, corresponding to the mapping key.
-  final Map<String, List<Object>> changed = <String, List<Object>>{};
+  final changed = <Object, List<Object>>{};
 
-  /// Metadata from each JSON string that the JsonDiffer was instructed to
-  /// save.
-  final Map<String, Object> metadata = <String, String>{};
+  /// A Map of _moved_ elements in the List, where the key is the original
+  /// position, and the value is the new position.
+  final moved = <int, int>{};
+
+  /// The path, starting from the root, where this [DiffNode] is describing the
+  /// left and right JSON, e.g. ["propertyA", 1, "propertyB"].
+  final List<Object> path;
 
   /// A convenience method for `node[]=`.
-  void operator []=(String s, DiffNode d) {
+  void operator []=(Object s, DiffNode d) {
     if (d == null) {
       return;
     }
@@ -50,22 +56,22 @@ class DiffNode {
   }
 
   /// A convenience method for `node[]`.
-  DiffNode operator [](String s) {
+  DiffNode operator [](Object s) {
     return node[s];
   }
 
   /// A convenience method for `node.containsKey()`.
-  bool containsKey(String s) {
+  bool containsKey(Object s) {
     return node.containsKey(s);
   }
 
-  void forEach(void Function(String s, DiffNode dn) ffn) {
+  void forEach(void Function(Object s, DiffNode dn) ffn) {
     if (node != null) {
       node.forEach(ffn);
     }
   }
 
-  List<Object> map(void Function(String s, DiffNode dn) ffn) {
+  List<Object> map(void Function(Object s, DiffNode dn) ffn) {
     final result = <void>[];
     if (node != null) {
       forEach((s, dn) {
@@ -75,7 +81,7 @@ class DiffNode {
     return result;
   }
 
-  void forEachOf(String key, void Function(String s, DiffNode dn) ffn) {
+  void forEachOf(String key, void Function(Object s, DiffNode dn) ffn) {
     if (node == null) {
       return;
     }
@@ -84,20 +90,20 @@ class DiffNode {
     }
   }
 
-  void forEachAdded(void Function(String s, Object o) ffn) {
+  void forEachAdded(void Function(Object s, Object o) ffn) {
     added.forEach(ffn);
   }
 
-  void forEachRemoved(void Function(String s, Object o) ffn) {
+  void forEachRemoved(void Function(Object s, Object o) ffn) {
     removed.forEach(ffn);
   }
 
-  void forEachChanged(void Function(String s, List<Object> o) ffn) {
+  void forEachChanged(void Function(Object s, List<Object> o) ffn) {
     changed.forEach(ffn);
   }
 
   void forAllAdded(void Function(Object k, Object o) ffn,
-      {Map<String, Object> root = const {}}) {
+      {Map<Object, Object> root = const {}}) {
     added.forEach((key, thisNode) => ffn(root, thisNode));
     node.forEach((key, node) {
       root[key] = <String, Object>{};
@@ -106,8 +112,8 @@ class DiffNode {
     });
   }
 
-  Map<String, Object> allAdded() {
-    final thisNode = <String, Object>{};
+  Map<Object, Object> allAdded() {
+    final thisNode = <Object, Object>{};
     added.forEach((k, v) {
       thisNode[k] = v;
     });
@@ -128,8 +134,13 @@ class DiffNode {
   bool get hasAdded => added.isNotEmpty;
   bool get hasRemoved => removed.isNotEmpty;
   bool get hasChanged => changed.isNotEmpty;
+  bool get hasMoved => moved.isNotEmpty;
   bool get hasNothing =>
-      added.isEmpty && removed.isEmpty && changed.isEmpty && node.isEmpty;
+      added.isEmpty &&
+      removed.isEmpty &&
+      changed.isEmpty &&
+      moved.isEmpty &&
+      node.isEmpty;
 
   /// Prunes the DiffNode tree.
   ///
@@ -148,23 +159,26 @@ class DiffNode {
   }
 
   @override
-  String toString() => _diffTexts(this, '').join('\n');
-
-  List<String> _diffTexts(DiffNode diff, String path) => [
-        for (final e in diff.removed.entries) ...[
-          '@ Removed from left at path "$path.${e.key}":',
-          '- ${jsonEncode(e.value)}',
-        ],
-        for (final e in diff.added.entries) ...[
-          '@ Added to right at path "$path.${e.key}":',
-          '+ ${jsonEncode(e.value)}'
-        ],
-        for (final e in diff.changed.entries) ...[
-          '@ Changed at path "$path.${e.key}":',
-          '- ${jsonEncode(e.value.first)}',
-          '+ ${jsonEncode(e.value.last)}',
-        ],
-        for (final e in diff.node.entries)
-          ..._diffTexts(e.value, '$path.${e.key}')
-      ];
+  String toString() => _diffToString(this).join('\n');
 }
+
+List<String> _diffToString(DiffNode diff) => [
+      for (final e in diff.removed.entries) ...[
+        '@ Removed from left at path "${[...diff.path, e.key]}":',
+        '- ${jsonEncode(e.value)}',
+      ],
+      for (final e in diff.added.entries) ...[
+        '@ Added to right at path "${[...diff.path, e.key]}":',
+        '+ ${jsonEncode(e.value)}'
+      ],
+      for (final e in diff.changed.entries) ...[
+        '@ Changed at path "${[...diff.path, e.key]}":',
+        '- ${jsonEncode(e.value.first)}',
+        '+ ${jsonEncode(e.value.last)}',
+      ],
+      for (final e in diff.moved.entries) ...[
+        '@ Moved at path "${[...diff.path, e.key]}"',
+        '${e.key} -> ${e.value}'
+      ],
+      for (final e in diff.node.entries) ..._diffToString(e.value)
+    ];

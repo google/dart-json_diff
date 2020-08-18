@@ -5,7 +5,7 @@ description: Utilities for diffing two JSON objects
 homepage: https://github.com/google/dart-json_diff
 
 environment:
-  sdk: '>=2.3.0 <3.0.0'
+  sdk: '>=2.6.0 <3.0.0'
 dependencies:
   collection: ^1.14.13
   diff_match_patch: ^0.3.0
