@@ -43,10 +43,10 @@ class JsonDiffer {
   /// documentation for [DiffNode] to understand how to access the differences
   /// found between the two JSON Strings.
   DiffNode diff() {
-    if (leftJson is Map<String, Object> && rightJson is Map<String, Object>) {
+    if (leftJson is Map && rightJson is Map) {
       return _diffObjects(
-        leftJson as Map<String, Object>,
-        rightJson as Map<String, Object>,
+        (leftJson as Map).cast<String, Object>(),
+        (rightJson as Map).cast<String, Object>(),
         [],
       )..prune();
     } else if (leftJson is List && rightJson is List) {
@@ -77,9 +77,9 @@ class JsonDiffer {
         node.changed[key] = [leftValue, rightValue];
       } else if (leftValue is List && rightValue is List) {
         node[key] = _diffLists(leftValue, rightValue, key, [...path, key]);
-      } else if (leftValue is Map<String, Object> &&
-          rightValue is Map<String, Object>) {
-        node[key] = _diffObjects(leftValue, rightValue, [...path, key]);
+      } else if (leftValue is Map && rightValue is Map) {
+        node[key] = _diffObjects(leftValue.cast<String, Object>(),
+            rightValue.cast<String, Object>(), [...path, key]);
       } else if (leftValue != rightValue) {
         // value is different between [left] and [right]
         node.changed[key] = [leftValue, rightValue];
@@ -159,10 +159,9 @@ class JsonDiffer {
             // Treat leftValue and rightValue as atomic objects, even if they are
             // deep maps or some such thing.
             node.changed[leftFoot] = [leftObject, rightObject];
-          } else if (leftObject is Map<String, Object> &&
-              rightObject is Map<String, Object>) {
-            node[leftFoot] =
-                _diffObjects(leftObject, rightObject, [...path, leftFoot]);
+          } else if (leftObject is Map && rightObject is Map) {
+            node[leftFoot] = _diffObjects(leftObject.cast<String, Object>(),
+                rightObject.cast<String, Object>(), [...path, leftFoot]);
           } else if (leftObject is List && rightObject is List) {
             node[leftFoot] =
                 _diffLists(leftObject, rightObject, null, [...path, leftFoot]);
