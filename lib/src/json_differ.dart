@@ -5,9 +5,8 @@ part of json_diff;
 
 /// A configurable class that can produce a diff of two JSON Strings.
 class JsonDiffer {
-  Map<String, Object> leftJson, rightJson;
+  Object leftJson, rightJson;
   final List<String> atomics = <String>[];
-  final List<String> metadataToKeep = <String>[];
   final List<String> ignored = <String>[];
 
   /// Constructs a new JsonDiffer using [leftString] and [rightString], two
@@ -21,20 +20,13 @@ class JsonDiffer {
     String leftString,
     String rightString,
   ) {
-    Object _leftJson = jsonDecode(leftString);
-    Object _rightJson = jsonDecode(rightString);
-
-    if (_leftJson is Map<String, Object> && _rightJson is Map<String, Object>) {
-      leftJson = _leftJson;
-      rightJson = _rightJson;
-    } else {
-      throw FormatException('JSON must be a single object');
-    }
+    leftJson = jsonDecode(leftString);
+    rightJson = jsonDecode(rightString);
   }
 
   JsonDiffer.fromJson(
-    Map<String, Object> leftJson,
-    Map<String, Object> rightJson,
+    Object leftJson,
+    Object rightJson,
   ) {
     if (leftJson != null && rightJson != null) {
       this.leftJson = leftJson;
@@ -44,40 +36,24 @@ class JsonDiffer {
     }
   }
 
-  /// Throws an exception if the values of each of the [topLevelFields] are not
-  /// equal.
-  ///
-  /// This is useful as a sanity check before diffing two JSON objects that are
-  /// expected to be partially identical. For example, if you are comparing
-  /// two historical versions of the same object, then each one should have the
-  /// same "name" field:
-  ///
-  ///     // Instantiate differ.
-  ///     differ.ensureIdentical(['name']);
-  ///     // Perform diff.
-  void ensureIdentical(List<String> topLevelFields) {
-    for (final field in topLevelFields) {
-      if (!leftJson.containsKey(field)) {
-        throw UncomparableJsonException('left does not contain field "$field"');
-      }
-      if (!rightJson.containsKey(field)) {
-        throw UncomparableJsonException(
-            'right does not contain field "$field"');
-      }
-      if (leftJson[field] != rightJson[field]) {
-        throw UncomparableJsonException(
-            'Unequal values for field "$field": ${leftJson[field]} vs ${rightJson[field]}');
-      }
-    }
-  }
-
   /// Compare the two JSON Strings, producing a [DiffNode].
   ///
   /// The differ will walk the entire object graph of each JSON object,
   /// tracking all additions, deletions, and changes. Please see the
   /// documentation for [DiffNode] to understand how to access the differences
   /// found between the two JSON Strings.
-  DiffNode diff() => _diffObjects(leftJson, rightJson, [])..prune();
+  DiffNode diff() {
+    if (leftJson is Map && rightJson is Map) {
+      return _diffObjects(
+        (leftJson as Map).cast<String, Object>(),
+        (rightJson as Map).cast<String, Object>(),
+        [],
+      )..prune();
+    } else if (leftJson is List && rightJson is List) {
+      return _diffLists(leftJson as List, rightJson as List, null, []);
+    }
+    return DiffNode([])..changed[''] = [leftJson, rightJson];
+  }
 
   DiffNode _diffObjects(
       Map<String, Object> left, Map<String, Object> right, List<Object> path) {
@@ -101,9 +77,9 @@ class JsonDiffer {
         node.changed[key] = [leftValue, rightValue];
       } else if (leftValue is List && rightValue is List) {
         node[key] = _diffLists(leftValue, rightValue, key, [...path, key]);
-      } else if (leftValue is Map<String, Object> &&
-          rightValue is Map<String, Object>) {
-        node[key] = _diffObjects(leftValue, rightValue, [...path, key]);
+      } else if (leftValue is Map && rightValue is Map) {
+        node[key] = _diffObjects(leftValue.cast<String, Object>(),
+            rightValue.cast<String, Object>(), [...path, key]);
       } else if (leftValue != rightValue) {
         // value is different between [left] and [right]
         node.changed[key] = [leftValue, rightValue];
@@ -183,10 +159,9 @@ class JsonDiffer {
             // Treat leftValue and rightValue as atomic objects, even if they are
             // deep maps or some such thing.
             node.changed[leftFoot] = [leftObject, rightObject];
-          } else if (leftObject is Map<String, Object> &&
-              rightObject is Map<String, Object>) {
-            node[leftFoot] =
-                _diffObjects(leftObject, rightObject, [...path, leftFoot]);
+          } else if (leftObject is Map && rightObject is Map) {
+            node[leftFoot] = _diffObjects(leftObject.cast<String, Object>(),
+                rightObject.cast<String, Object>(), [...path, leftFoot]);
           } else if (leftObject is List && rightObject is List) {
             node[leftFoot] =
                 _diffLists(leftObject, rightObject, null, [...path, leftFoot]);

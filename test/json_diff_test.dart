@@ -10,36 +10,11 @@ import 'package:json_diff/json_diff.dart';
 import 'package:test/test.dart';
 
 void main() {
-  JsonDiffer differ, necksDiffer;
-
-  setUp(() {
-    necksDiffer = JsonDiffer.fromJson(necks2000Map, necks2010Map);
-  });
-
-  test('JsonDiffer initializes OK', () {
-    differ = JsonDiffer.fromJson({'a': 1}, {'b': 1});
-    expect(differ.leftJson['a'], equals(1));
-
-    expect(() => JsonDiffer('{}', '{}'), returnsNormally);
-
-    expect(necksDiffer.leftJson['owner'], equals(necks2000Map['owner']));
-    expect(necksDiffer.rightJson['owner'], equals(necks2010Map['owner']));
-  });
+  JsonDiffer differ;
 
   test('JsonDiffer throws FormatException', () {
     expect(() => JsonDiffer('{', '{}'), throwsFormatException);
     expect(() => JsonDiffer('', ''), throwsFormatException);
-    // TODO: support List root nodes
-    expect(() => JsonDiffer('[]', '[]'), throwsFormatException);
-  });
-
-  test('JsonDiffer ensureIdentical returns OK', () {
-    expect(() => necksDiffer.ensureIdentical(['name']), returnsNormally);
-  });
-
-  test('JsonDiffer ensureIdentical raises', () {
-    expect(() => necksDiffer.ensureIdentical(['owner']),
-        throwsA(isA<UncomparableJsonException>()));
   });
 
   test('JsonDiffer diff() identical objects', () {
@@ -51,11 +26,41 @@ void main() {
     expect(node.node, isEmpty);
   });
 
+  test('JsonDiffer diff() identical lists', () {
+    differ = JsonDiffer.fromJson([1, 2, 3], [1, 2, 3]);
+    final node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, isEmpty);
+  });
+
+  test('JsonDiffer diff() comparing a list and a map', () {
+    final differ = JsonDiffer.fromJson([1, 2], {'foo': 'bar'});
+    final node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed[''], [
+      [1, 2],
+      {'foo': 'bar'}
+    ]);
+    expect(node.node, isEmpty);
+  });
+
   test('JsonDiffer diff() with a new value', () {
     differ = JsonDiffer('{"a": 1}', '{"a": 1, "b": 2}');
     final node = differ.diff();
     expect(node.added, hasLength(1));
     expect(node.added['b'], equals(2));
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, isEmpty);
+  });
+
+  test('JsonDiffer diff() lists with a new value', () {
+    differ = JsonDiffer.fromJson([1, 2, 3], [1, 2, 3, 4]);
+    final node = differ.diff();
+    expect(node.added[3], equals(4));
     expect(node.removed, isEmpty);
     expect(node.changed, isEmpty);
     expect(node.node, isEmpty);
@@ -84,6 +89,15 @@ void main() {
     expect(node.node, isEmpty);
   });
 
+  test('JsonDiffer diff() lists with a removed value', () {
+    differ = JsonDiffer.fromJson([1, 2, 3, 4], [1, 2, 3]);
+    final node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed[3], equals(4));
+    expect(node.changed, isEmpty);
+    expect(node.node, isEmpty);
+  });
+
   test('JsonDiffer diff() with a changed value', () {
     differ = JsonDiffer('{"a": 1}', '{"a": 2}');
     final node = differ.diff();
@@ -91,6 +105,15 @@ void main() {
     expect(node.removed, isEmpty);
     expect(node.changed, hasLength(1));
     expect(node.changed['a'], equals([1, 2]));
+    expect(node.node, isEmpty);
+  });
+
+  test('JsonDiffer diff() lists with a changed value', () {
+    differ = JsonDiffer.fromJson([1, 2, 3, 4], [1, 2, 9, 4]);
+    final node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed[2], equals([3, 9]));
     expect(node.node, isEmpty);
   });
 
@@ -286,67 +309,3 @@ void main() {
 }
 
 String jsonFrom(Map<String, Object> obj) => JsonEncoder().convert(obj);
-
-const Map<String, Object> necks2000Map = {
-  'name': 'New York Necks',
-  'home_town': 'New York',
-  'division': 'Atlantic',
-  'founded': 1990,
-  'owner': 'Tracy',
-  'head_coach': 'Larry Lankworth',
-  'players': {
-    'Towering Tom': {
-      'name': 'Towering Tom',
-      'position': 'Forward',
-      'Jersey': 13
-    },
-    'Benny Beanstalk': {
-      'name': 'Benny Beanstalk',
-      'position': 'Center',
-      'Jersey': 21
-    },
-    'Elevated Elias': {
-      'name': 'Elevated Elias',
-      'position': 'Guard',
-      'Jersey': 34
-    },
-    'Altitudinous Al': {
-      'name': 'Altitudinous Al',
-      'position': 'Forward',
-      'Jersey': 55
-    },
-    'Lonny the Lofty': {
-      'name': 'Lonny the Lofty',
-      'position': 'Guard',
-      'Jersey': 89
-    }
-  },
-};
-
-const Map<String, Object> necks2010Map = {
-  'name': 'New York Necks',
-  'home_town': 'New York',
-  'division': 'Atlantic',
-  'founded': 1990,
-  'owner': 'Terry',
-  'head_coach': 'Harold High-Reach',
-  'players': {
-    'Towering Tom': {
-      'name': 'Towering Tom',
-      'position': 'Forward',
-      'Jersey': 13
-    },
-    'Tim Tallbert': {'name': 'Tim Tallbert', 'position': 'Center', 'Jersey': 8},
-    'Elevated Elias': {
-      'name': 'Elevated Elias',
-      'position': 'Guard',
-      'Jersey': 34
-    },
-    'Frank': {'name': 'Frank', 'position': 'Forward', 'Jersey': 5},
-    'Lonny the Lofty': {
-      'name': 'Lonny the Lofty',
-      'position': 'Guard',
-      'Jersey': 89
-    }
-  },
-};
