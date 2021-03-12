@@ -27,7 +27,7 @@ void main() {
   });
 
   test('JsonDiffer diff() identical lists', () {
-    differ = JsonDiffer.fromJson([1, 2, 3], [1, 2, 3]);
+    differ = JsonDiffer.fromJson([1, 2, null], [1, 2, null]);
     final node = differ.diff();
     expect(node.added, isEmpty);
     expect(node.removed, isEmpty);
@@ -48,10 +48,10 @@ void main() {
   });
 
   test('JsonDiffer diff() with a new value', () {
-    differ = JsonDiffer('{"a": 1}', '{"a": 1, "b": 2}');
+    differ = JsonDiffer('{"a": 1}', '{"a": 1, "b": null}');
     final node = differ.diff();
     expect(node.added, hasLength(1));
-    expect(node.added['b'], equals(2));
+    expect(node.added['b'], equals(null));
     expect(node.removed, isEmpty);
     expect(node.changed, isEmpty);
     expect(node.node, isEmpty);
@@ -61,6 +61,15 @@ void main() {
     differ = JsonDiffer.fromJson([1, 2, 3], [1, 2, 3, 4]);
     final node = differ.diff();
     expect(node.added[3], equals(4));
+    expect(node.removed, isEmpty);
+    expect(node.changed, isEmpty);
+    expect(node.node, isEmpty);
+  });
+
+  test('JsonDiffer diff() lists with a new null value', () {
+    differ = JsonDiffer.fromJson([1, 2, 3], [1, 2, 3, null]);
+    final node = differ.diff();
+    expect(node.added[3], equals(null));
     expect(node.removed, isEmpty);
     expect(node.changed, isEmpty);
     expect(node.node, isEmpty);
@@ -98,6 +107,15 @@ void main() {
     expect(node.node, isEmpty);
   });
 
+  test('JsonDiffer diff() lists with a removed null value', () {
+    differ = JsonDiffer.fromJson([1, 2, 3, null], [1, 2, 3]);
+    final node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed[3], equals(null));
+    expect(node.changed, isEmpty);
+    expect(node.node, isEmpty);
+  });
+
   test('JsonDiffer diff() with a changed value', () {
     differ = JsonDiffer('{"a": 1}', '{"a": 2}');
     final node = differ.diff();
@@ -105,6 +123,16 @@ void main() {
     expect(node.removed, isEmpty);
     expect(node.changed, hasLength(1));
     expect(node.changed['a'], equals([1, 2]));
+    expect(node.node, isEmpty);
+  });
+
+  test('JsonDiffer diff() with a changed value, to null', () {
+    differ = JsonDiffer('{"a": 1}', '{"a": null}');
+    final node = differ.diff();
+    expect(node.added, isEmpty);
+    expect(node.removed, isEmpty);
+    expect(node.changed, hasLength(1));
+    expect(node.changed['a'], equals([1, null]));
     expect(node.node, isEmpty);
   });
 
@@ -307,5 +335,3 @@ void main() {
     expect(node.node['list']!.moved[3], equals(0));
   });
 }
-
-String jsonFrom(Map<String, Object> obj) => JsonEncoder().convert(obj);

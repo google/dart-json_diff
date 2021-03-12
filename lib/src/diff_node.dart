@@ -29,15 +29,15 @@ class DiffNode {
 
   /// A Map containing the key/value pairs that were _added_ between the left
   /// JSON and the right.
-  final added = <Object, Object>{};
+  final added = <Object, Object?>{};
 
   /// A Map containing the key/value pairs that were _removed_ between the left
   /// JSON and the right.
-  final removed = <Object, Object>{};
+  final removed = <Object, Object?>{};
 
   /// A Map whose values are 2-element arrays containing the left value and the
   /// right value, corresponding to the mapping key.
-  final Map<Object, List<Object>> changed = <Object, List<Object>>{};
+  final Map<Object, List<Object?>> changed = <Object, List<Object?>>{};
 
   /// A Map of _moved_ elements in the List, where the key is the original
   /// position, and the value is the new position.
@@ -64,12 +64,12 @@ class DiffNode {
 
   void forEach(void Function(Object s, DiffNode dn) ffn) => node.forEach(ffn);
 
-  List<Object> map(void Function(Object s, DiffNode dn) ffn) {
+  List<Object?> map(void Function(Object s, DiffNode dn) ffn) {
     final result = <void>[];
     forEach((s, dn) {
       result.add(ffn(s, dn));
     });
-    return result as List<Object>;
+    return result;
   }
 
   void forEachOf(String key, void Function(Object s, DiffNode dn) ffn) {
@@ -78,27 +78,27 @@ class DiffNode {
     }
   }
 
-  void forEachAdded(void Function(Object s, Object o) ffn) =>
+  void forEachAdded(void Function(Object s, Object? o) ffn) =>
       added.forEach(ffn);
 
-  void forEachRemoved(void Function(Object s, Object o) ffn) =>
+  void forEachRemoved(void Function(Object s, Object? o) ffn) =>
       removed.forEach(ffn);
 
-  void forEachChanged(void Function(Object s, List<Object> o) ffn) =>
+  void forEachChanged(void Function(Object s, List<Object?> o) ffn) =>
       changed.forEach(ffn);
 
-  void forAllAdded(void Function(Object k, Object o) ffn,
-      {Map<Object, Object> root = const {}}) {
+  void forAllAdded(void Function(Object? _, Object? o) ffn,
+      {Map<Object, Object?> root = const {}}) {
     added.forEach((key, thisNode) => ffn(root, thisNode));
     node.forEach((key, node) {
-      root[key] = <String, Object>{};
+      root[key] = <String, Object?>{};
       node.forAllAdded((addedMap, root) => ffn(root, addedMap),
-          root: root[key] as Map<String, Object>);
+          root: root[key] as Map<String, Object?>);
     });
   }
 
-  Map<Object, Object>? allAdded() {
-    final thisNode = <Object, Object>{};
+  Map<Object, Object?>? allAdded() {
+    final thisNode = <Object, Object?>{};
     added.forEach((k, v) {
       thisNode[k] = v;
     });
