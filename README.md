@@ -1,4 +1,4 @@
-[![Build Status](https://github.com/dart-lang/markdown/workflows/Dart%20CI/badge.svg)](https://github.com/dart-lang/markdown/actions?query=workflow%3A"Dart+CI"+branch%3Amaster)
+[![Build Status](https://github.com/google/dart-json_diff/workflows/Dart%20CI/badge.svg)](https://github.com/google/dart-json_diff/actions?query=workflow%3A"Dart+CI"+branch%3Amaster)
 
 Generate a diff between two JSON strings.
 
