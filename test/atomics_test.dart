@@ -72,7 +72,7 @@ void main() {
     expect(node.changed, isEmpty);
     expect(node.node, hasLength(1));
 
-    var innerNode = node.node['a'];
+    var innerNode = node.node['a']!;
     expect(innerNode.changed, hasLength(1));
     expect(
         innerNode.changed['y'],
@@ -81,7 +81,7 @@ void main() {
           {'z': 4}
         ]));
 
-    innerNode = node.node['a']['x'];
+    innerNode = node.node['a']!['x']!;
     expect(innerNode.changed, hasLength(1));
     expect(
         innerNode.changed['y'],

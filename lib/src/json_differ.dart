@@ -5,7 +5,7 @@ part of json_diff;
 
 /// A configurable class that can produce a diff of two JSON Strings.
 class JsonDiffer {
-  Object leftJson, rightJson;
+  final Object leftJson, rightJson;
   final List<String> atomics = <String>[];
   final List<String> ignored = <String>[];
 
@@ -19,22 +19,10 @@ class JsonDiffer {
   JsonDiffer(
     String leftString,
     String rightString,
-  ) {
-    leftJson = jsonDecode(leftString);
-    rightJson = jsonDecode(rightString);
-  }
+  )   : leftJson = jsonDecode(leftString) as Object,
+        rightJson = jsonDecode(rightString) as Object;
 
-  JsonDiffer.fromJson(
-    Object leftJson,
-    Object rightJson,
-  ) {
-    if (leftJson != null && rightJson != null) {
-      this.leftJson = leftJson;
-      this.rightJson = rightJson;
-    } else {
-      throw FormatException('JSON must not be null');
-    }
-  }
+  JsonDiffer.fromJson(this.leftJson, this.rightJson);
 
   /// Compare the two JSON Strings, producing a [DiffNode].
   ///
@@ -45,20 +33,21 @@ class JsonDiffer {
   DiffNode diff() {
     if (leftJson is Map && rightJson is Map) {
       return _diffObjects(
-        (leftJson as Map).cast<String, Object>(),
-        (rightJson as Map).cast<String, Object>(),
+        (leftJson as Map).cast<String, Object?>(),
+        (rightJson as Map).cast<String, Object?>(),
         [],
       )..prune();
     } else if (leftJson is List && rightJson is List) {
-      return _diffLists(leftJson as List, rightJson as List, null, []);
+      return _diffLists((leftJson as List).cast<Object?>(),
+          (rightJson as List).cast<Object?>(), null, []);
     }
     return DiffNode([])..changed[''] = [leftJson, rightJson];
   }
 
-  DiffNode _diffObjects(
-      Map<String, Object> left, Map<String, Object> right, List<Object> path) {
+  DiffNode _diffObjects(Map<String, Object?> left, Map<String, Object?> right,
+      List<Object> path) {
     final node = DiffNode(path);
-    left.forEach((String key, Object leftValue) {
+    left.forEach((String key, Object? leftValue) {
       if (ignored.contains(key)) {
         return;
       }
@@ -72,21 +61,22 @@ class JsonDiffer {
       final rightValue = right[key];
       if (atomics.contains(key) &&
           leftValue.toString() != rightValue.toString()) {
-        // Treat leftValue and rightValue as atomic objects, even if they are
-        // deep maps or some such thing.
+        // Treat [leftValue] and [rightValue] as atomic objects, even if they
+        // are deep maps or some such thing.
         node.changed[key] = [leftValue, rightValue];
       } else if (leftValue is List && rightValue is List) {
-        node[key] = _diffLists(leftValue, rightValue, key, [...path, key]);
+        node[key] = _diffLists(leftValue.cast<Object?>(),
+            rightValue.cast<Object?>(), key, [...path, key]);
       } else if (leftValue is Map && rightValue is Map) {
-        node[key] = _diffObjects(leftValue.cast<String, Object>(),
-            rightValue.cast<String, Object>(), [...path, key]);
+        node[key] = _diffObjects(leftValue.cast<String, Object?>(),
+            rightValue.cast<String, Object?>(), [...path, key]);
       } else if (leftValue != rightValue) {
-        // value is different between [left] and [right]
+        // value is different between [left] and [right].
         node.changed[key] = [leftValue, rightValue];
       }
     });
 
-    right.forEach((String key, Object value) {
+    right.forEach((String key, Object? value) {
       if (ignored.contains(key)) {
         return;
       }
@@ -100,10 +90,11 @@ class JsonDiffer {
     return node;
   }
 
-  bool _deepEquals(e1, e2) => DeepCollectionEquality.unordered().equals(e1, e2);
+  bool _deepEquals(Object? e1, Object? e2) =>
+      DeepCollectionEquality.unordered().equals(e1, e2);
 
-  DiffNode _diffLists(List<Object> left, List<Object> right, String parentKey,
-      List<Object> path) {
+  DiffNode _diffLists(List<Object?> left, List<Object?> right,
+      String? parentKey, List<Object> path) {
     final node = DiffNode(path);
     var leftHand = 0;
     var leftFoot = 0;
@@ -146,8 +137,8 @@ class JsonDiffer {
         }
 
         if (!foundMissing) {
-          // Never found left[leftFoot] in right, nor right[rightFoot] in left.
-          // This must just be a changed value.
+          // Never found `left[leftFoot]` in [right], nor `right[rightFoot]` in
+          // [left]. This must just be a changed value.
           // TODO: This notation is wrong for a case such as:
           //     [1,2,3,4,5,6] => [1,4,5,7]
           //     changed.first = [[5, 6], [3,7]
@@ -160,11 +151,11 @@ class JsonDiffer {
             // deep maps or some such thing.
             node.changed[leftFoot] = [leftObject, rightObject];
           } else if (leftObject is Map && rightObject is Map) {
-            node[leftFoot] = _diffObjects(leftObject.cast<String, Object>(),
-                rightObject.cast<String, Object>(), [...path, leftFoot]);
+            node[leftFoot] = _diffObjects(leftObject.cast<String, Object?>(),
+                rightObject.cast<String, Object?>(), [...path, leftFoot]);
           } else if (leftObject is List && rightObject is List) {
-            node[leftFoot] =
-                _diffLists(leftObject, rightObject, null, [...path, leftFoot]);
+            node[leftFoot] = _diffLists(leftObject.cast<Object?>(),
+                rightObject.cast<Object?>(), null, [...path, leftFoot]);
           } else {
             node.changed[leftFoot] = [leftObject, rightObject];
           }
@@ -193,13 +184,13 @@ class JsonDiffer {
           .removeFirstWhere((key, value) => _deepEquals(e.value, value));
 
       if (added != null) {
-        // We've found an equal element in added,
-        // put the element in moved and filter it out from removed.
+        // We've found an equal element in [added], put the element in
+        // `node.moved` and filtered it out from `node.removed`.
         node.moved[e.key as int] = added.key as int;
         return false;
       }
 
-      // Element are not present in added, it is simply removed
+      // Element is not present in [added]; it is simply removed.
       return true;
     }).toList();
 
@@ -221,7 +212,7 @@ class UncomparableJsonException implements Exception {
 }
 
 extension<K, V> on Map<K, V> {
-  MapEntry<K, V> removeFirstWhere(bool Function(K, V) test) {
+  MapEntry<K, V>? removeFirstWhere(bool Function(K, V) test) {
     for (final entry in entries) {
       if (test(entry.key, entry.value)) {
         remove(entry.key);

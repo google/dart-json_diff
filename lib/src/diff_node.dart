@@ -29,15 +29,15 @@ class DiffNode {
 
   /// A Map containing the key/value pairs that were _added_ between the left
   /// JSON and the right.
-  final added = <Object, Object>{};
+  final added = <Object, Object?>{};
 
   /// A Map containing the key/value pairs that were _removed_ between the left
   /// JSON and the right.
-  final removed = <Object, Object>{};
+  final removed = <Object, Object?>{};
 
   /// A Map whose values are 2-element arrays containing the left value and the
   /// right value, corresponding to the mapping key.
-  final changed = <Object, List<Object>>{};
+  final Map<Object, List<Object?>> changed = <Object, List<Object?>>{};
 
   /// A Map of _moved_ elements in the List, where the key is the original
   /// position, and the value is the new position.
@@ -49,14 +49,11 @@ class DiffNode {
 
   /// A convenience method for `node[]=`.
   void operator []=(Object s, DiffNode d) {
-    if (d == null) {
-      return;
-    }
     node[s] = d;
   }
 
   /// A convenience method for `node[]`.
-  DiffNode operator [](Object s) {
+  DiffNode? operator [](Object s) {
     return node[s];
   }
 
@@ -65,55 +62,43 @@ class DiffNode {
     return node.containsKey(s);
   }
 
-  void forEach(void Function(Object s, DiffNode dn) ffn) {
-    if (node != null) {
-      node.forEach(ffn);
-    }
-  }
+  void forEach(void Function(Object s, DiffNode dn) ffn) => node.forEach(ffn);
 
-  List<Object> map(void Function(Object s, DiffNode dn) ffn) {
+  List<Object?> map(void Function(Object s, DiffNode dn) ffn) {
     final result = <void>[];
-    if (node != null) {
-      forEach((s, dn) {
-        result.add(ffn(s, dn));
-      });
-    }
+    forEach((s, dn) {
+      result.add(ffn(s, dn));
+    });
     return result;
   }
 
   void forEachOf(String key, void Function(Object s, DiffNode dn) ffn) {
-    if (node == null) {
-      return;
-    }
     if (node.containsKey(key)) {
-      node[key].forEach(ffn);
+      node[key]!.forEach(ffn);
     }
   }
 
-  void forEachAdded(void Function(Object s, Object o) ffn) {
-    added.forEach(ffn);
-  }
+  void forEachAdded(void Function(Object s, Object? o) ffn) =>
+      added.forEach(ffn);
 
-  void forEachRemoved(void Function(Object s, Object o) ffn) {
-    removed.forEach(ffn);
-  }
+  void forEachRemoved(void Function(Object s, Object? o) ffn) =>
+      removed.forEach(ffn);
 
-  void forEachChanged(void Function(Object s, List<Object> o) ffn) {
-    changed.forEach(ffn);
-  }
+  void forEachChanged(void Function(Object s, List<Object?> o) ffn) =>
+      changed.forEach(ffn);
 
-  void forAllAdded(void Function(Object k, Object o) ffn,
-      {Map<Object, Object> root = const {}}) {
+  void forAllAdded(void Function(Object? _, Object? o) ffn,
+      {Map<Object, Object?> root = const {}}) {
     added.forEach((key, thisNode) => ffn(root, thisNode));
     node.forEach((key, node) {
-      root[key] = <String, Object>{};
+      root[key] = <String, Object?>{};
       node.forAllAdded((addedMap, root) => ffn(root, addedMap),
-          root: root[key] as Map<String, Object>);
+          root: root[key] as Map<String, Object?>);
     });
   }
 
-  Map<Object, Object> allAdded() {
-    final thisNode = <Object, Object>{};
+  Map<Object, Object?>? allAdded() {
+    final thisNode = <Object, Object?>{};
     added.forEach((k, v) {
       thisNode[k] = v;
     });
@@ -122,7 +107,7 @@ class DiffNode {
       if (down == null) {
         return;
       }
-      thisNode[k] = v.allAdded();
+      thisNode[k] = down;
     });
 
     if (thisNode.isEmpty) {
@@ -150,7 +135,7 @@ class DiffNode {
     var keys = node.keys.toList();
     for (var i = keys.length - 1; i >= 0; i--) {
       final key = keys[i];
-      final d = node[key];
+      final d = node[key]!;
       d.prune();
       if (d.hasNothing) {
         node.remove(key);
