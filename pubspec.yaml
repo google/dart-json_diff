@@ -8,7 +8,7 @@ environment:
   sdk: '>=2.12.0 <3.0.0'
 dependencies:
   collection: ^1.14.13
-  diff_match_patch: ^0.3.0
+  diff_match_patch: ^0.4.1
 dev_dependencies:
   test: ^1.6.4
   pedantic: ^1.11.0
