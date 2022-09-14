@@ -12,8 +12,6 @@ pubspec.lock
 *.js.deps
 *.js.map
 
-diff*
-sdk-*
 
 # Files and directories created by pub
 .dart_tool/
