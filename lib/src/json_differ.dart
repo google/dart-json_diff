@@ -145,7 +145,7 @@ class JsonDiffer {
           final leftObject = left[leftFoot];
           final rightObject = right[rightFoot];
           if (parentKey != null &&
-              atomics.contains(parentKey + '[]') &&
+              atomics.contains('$parentKey[]') &&
               leftObject.toString() != rightObject.toString()) {
             // Treat leftValue and rightValue as atomic objects, even if they are
             // deep maps or some such thing.
