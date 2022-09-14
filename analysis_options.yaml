@@ -1,11 +1,11 @@
-# Defines a default set of lint rules enforced for
-# projects at Google. For details and rationale,
-# see https://github.com/dart-lang/pedantic#enabled-lints.
-include: package:pedantic/analysis_options.yaml
+include: package:lints/recommended.yaml
 
 analyzer:
   language:
+    strict-casts: true
     strict-inference: true
     strict-raw-types: true
-  strong-mode:
-    implicit-casts: false
+
+linter:
+  rules:
+    - avoid_dynamic_calls
